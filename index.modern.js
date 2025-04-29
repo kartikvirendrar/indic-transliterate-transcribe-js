@@ -493,7 +493,8 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             const response = await fetch(apiURL, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Authorization": apiKey
                 },
                 body: JSON.stringify({
                     audioBase64: base64Audio,
