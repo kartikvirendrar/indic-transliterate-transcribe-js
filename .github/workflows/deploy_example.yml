@@ -15,16 +15,12 @@ jobs:
         with:
           node-version: 16 
           
-      - name: Install and Build 🔧
+      - name: Install base packages 🔧
         run: |
-          npm install
-          npm run build
-        working-directory: example
-        env:
-          CI: false
+          npm ci
           
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4.2.5
         with:
           branch: gh-pages
-          folder: example/build
+          folder: build
