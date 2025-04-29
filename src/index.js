@@ -467,7 +467,7 @@ export const IndicTransliterate = ({
     try {
       const response = await fetch(apiURL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": apiKey },
         body: JSON.stringify({ audioBase64: base64Audio, lang })
       })
 
