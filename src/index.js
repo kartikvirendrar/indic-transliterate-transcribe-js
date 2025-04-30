@@ -444,6 +444,7 @@ export const IndicTransliterate = ({
           const end = target.selectionEnd ?? 0
           const text = target.value
           target.value = text.slice(0, start) + transcript + text.slice(end)
+          onChangeText(text.slice(0, start) + transcript + text.slice(end))
         }
 
         mediaRecorder.start()
