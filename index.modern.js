@@ -474,6 +474,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     const end = target.selectionEnd ?? 0;
                     const text = target.value;
                     target.value = text.slice(0, start) + transcript + text.slice(end);
+                    onChangeText(text.slice(0, start) + transcript + text.slice(end));
                 };
                 mediaRecorder.start();
                 isRecording = true;
