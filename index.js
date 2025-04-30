@@ -441,7 +441,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         const target = inputRef.current;
         if (!target) return;
         const micBtn = document.createElement("button");
-        micBtn.innerHTML = '<i class="fa-solid fa-microphone" style="font-size: 16px;"></i>';
+        micBtn.innerHTML = `<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#000000" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>`;
         micBtn.style.position = "absolute";
         micBtn.style.padding = "5px";
         micBtn.style.border = "none";
@@ -469,10 +469,10 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             micBtn.appendChild(spinner);
         };
         const restoreMicIcon = ()=>{
-            micBtn.innerHTML = '<i class="fa-solid fa-microphone" style="font-size: 16px;"></i>';
+            micBtn.innerHTML = `<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#000000" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>`;
         };
         const restoreStopIcon = ()=>{
-            micBtn.innerHTML = '<i class="fa-solid fa-microphone" style="font-size: 16px; color:red;"></i>';
+            micBtn.innerHTML = '<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#ff2600" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>';
         };
         micBtn.onclick = async ()=>{
             if (!navigator.mediaDevices) {
@@ -496,11 +496,12 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                         type: "audio/webm"
                     });
                     const base64Audio = await blobToBase64Raw(audioBlob);
-                    const transcript = await transcribeWithDhruva(apiURL, lang, base64Audio);
+                    const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
                     const start = target.selectionStart;
                     const end = target.selectionEnd;
                     const text = target.value;
                     target.value = text.slice(0, start) + transcript + text.slice(end);
+                    onChangeText(text.slice(0, start) + transcript + text.slice(end));
                     restoreMicIcon();
                 };
                 mediaRecorder.start();
@@ -536,9 +537,9 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         for(let i = 0; i < uint8Array.length; i++)binary += String.fromCharCode(uint8Array[i]);
         return btoa(binary);
     }
-    async function transcribeWithDhruva(apiURL1, lang, base64Audio) {
+    async function transcribeWithDhruva(apiURL, lang, base64Audio) {
         try {
-            const response = await fetch(apiURL1, {
+            const response = await fetch(apiURL, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
