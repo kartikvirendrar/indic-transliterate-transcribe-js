@@ -188,10 +188,7 @@ export const IndicTransliterate = ({
         uuid: uuid,
         parent_uuid: parentUuid,
         word: value,
-        source:
-          localStorage.getItem("source") != undefined
-            ? localStorage.getItem("source")
-            : "node-module",
+        source:"anudesh",
         language: lang,
         steps: logJsonArray
       }
