@@ -428,7 +428,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         const target = inputRef.current;
         if (!target) return;
         const micBtn = document.createElement("button");
-        micBtn.innerHTML = "\uD83C\uDFA4";
+        micBtn.innerHTML = '<i class="fa-solid fa-microphone" style="font-size: 16px;"></i>';
         micBtn.style.position = "absolute";
         micBtn.style.padding = "5px";
         micBtn.style.border = "none";
@@ -438,49 +438,83 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         micBtn.style.boxShadow = "0 0 6px rgba(0,0,0,0.2)";
         micBtn.style.bottom = "5px";
         micBtn.style.right = "5px";
+        micBtn.style.width = "32px";
+        micBtn.style.height = "32px";
+        micBtn.style.display = "flex";
+        micBtn.style.alignItems = "center";
+        micBtn.style.justifyContent = "center";
         const wrapper = document.createElement("div");
         wrapper.style.position = "relative";
-        target.parentNode?.insertBefore(wrapper, target);
+        target.parentNode.insertBefore(wrapper, target);
         wrapper.appendChild(target);
         wrapper.appendChild(micBtn);
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let isRecording = false;
+        let mediaRecorder, audioChunks = [], isRecording = false;
+        const showLoader = ()=>{
+            micBtn.innerHTML = "";
+            const spinner = document.createElement("div");
+            spinner.className = "voice-typing-spinner";
+            micBtn.appendChild(spinner);
+        };
+        const restoreMicIcon = ()=>{
+            micBtn.innerHTML = '<i class="fa-solid fa-microphone" style="font-size: 16px;"></i>';
+        };
+        const restoreStopIcon = ()=>{
+            micBtn.innerHTML = '<i class="fa-solid fa-microphone" style="font-size: 16px; color:red;"></i>';
+        };
         micBtn.onclick = async ()=>{
             if (!navigator.mediaDevices) {
                 alert("Browser doesn't support audio recording.");
                 return;
             }
-            if (isRecording && mediaRecorder) {
+            if (isRecording) {
                 mediaRecorder.stop();
                 isRecording = false;
-                micBtn.innerHTML = "\uD83C\uDFA4";
+                showLoader();
             } else {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: true
                 });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                mediaRecorder.ondataavailable = (event)=>{
-                    audioChunks.push(event.data);
-                };
+                mediaRecorder.ondataavailable = (event)=>audioChunks.push(event.data);
                 mediaRecorder.onstop = async ()=>{
+                    showLoader();
                     const audioBlob = new Blob(audioChunks, {
                         type: "audio/webm"
                     });
                     const base64Audio = await blobToBase64Raw(audioBlob);
-                    const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
-                    const start = target.selectionStart ?? 0;
-                    const end = target.selectionEnd ?? 0;
+                    const transcript = await transcribeWithDhruva(apiURL, lang, base64Audio);
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
                     const text = target.value;
                     target.value = text.slice(0, start) + transcript + text.slice(end);
-                    onChangeText(text.slice(0, start) + transcript + text.slice(end));
+                    restoreMicIcon();
                 };
                 mediaRecorder.start();
                 isRecording = true;
-                micBtn.innerHTML = "\u23F9\uFE0F";
+                restoreStopIcon();
             }
         };
+        if (!document.getElementById("voice-typing-spinner-style")) {
+            const style = document.createElement("style");
+            style.id = "voice-typing-spinner-style";
+            style.innerHTML = `
+      .voice-typing-spinner {
+        width: 16px;
+        height: 16px;
+        border: 3px solid #ccc;
+        border-top: 3px solid #333;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+            document.head.appendChild(style);
+        }
     };
     async function blobToBase64Raw(blob) {
         const arrayBuffer = await blob.arrayBuffer();
@@ -489,9 +523,9 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         for(let i = 0; i < uint8Array.length; i++)binary += String.fromCharCode(uint8Array[i]);
         return btoa(binary);
     }
-    async function transcribeWithDhruva(apiURL, lang, base64Audio) {
+    async function transcribeWithDhruva(apiURL1, lang, base64Audio) {
         try {
-            const response = await fetch(apiURL, {
+            const response = await fetch(apiURL1, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
