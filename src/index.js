@@ -188,7 +188,7 @@ export const IndicTransliterate = ({
         uuid: uuid,
         parent_uuid: parentUuid,
         word: value,
-        source:"anudesh",
+        source: "anudesh",
         language: lang,
         steps: logJsonArray
       }
@@ -379,6 +379,25 @@ export const IndicTransliterate = ({
     })
   }, [lang])
 
+  const voiceLogs = []
+  let unsentLogs = []
+
+  setInterval(() => {
+    if (unsentLogs.length === 0) return
+
+    fetch("https://demoapi-ars/log-voice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logs: unsentLogs })
+    })
+      .then(() => {
+        unsentLogs = []
+      })
+      .catch(e => {
+        console.error("Error:", e)
+      })
+  }, 60000)
+
   const enableVoiceTyping = () => {
     const target = inputRef.current
     if (!target) return
@@ -420,7 +439,7 @@ export const IndicTransliterate = ({
     };
 
     const restoreStopIcon = () => {
-    micBtn.innerHTML = '<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#ff2600" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>';
+      micBtn.innerHTML = '<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#ff2600" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>';
     };
 
     micBtn.onclick = async () => {
@@ -448,11 +467,24 @@ export const IndicTransliterate = ({
 
           const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
 
-          const start = target.selectionStart;
-          const end = target.selectionEnd;
-          const text = target.value;
-          target.value = text.slice(0, start) + transcript + text.slice(end);
-          onChangeText(text.slice(0, start) + transcript + text.slice(end));
+          const start = target.selectionStart ?? 0;
+          const end = start + transcript.length;
+          const oldValue = target.value;
+
+          target.value = oldValue.slice(0, start) + transcript + oldValue.slice(start);
+          onChangeText(oldValue.slice(0, start) + transcript + oldValue.slice(start));
+
+          const logItem = {
+            id: crypto.randomUUID(),
+            audioBase64: base64Audio,
+            aiTranscript: transcript,
+            startIndex: start,
+            endIndex: end,
+            finalText: transcript,
+            timestamp: new Date().toISOString()
+          }
+          voiceLogs.push(logItem);
+
           restoreMicIcon();
         };
 
