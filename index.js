@@ -397,24 +397,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
     }, [
         lang
     ]);
-    const voiceLogs = [];
-    let unsentLogs = [];
-    setInterval(()=>{
-        if (unsentLogs.length === 0) return;
-        fetch("https://demoapi-ars/log-voice", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                logs: unsentLogs
-            })
-        }).then(()=>{
-            unsentLogs = [];
-        }).catch((e)=>{
-            console.error("Error:", e);
-        });
-    }, 60000);
     const enableVoiceTyping = ()=>{
         const target = inputRef.current;
         if (!target) return;
@@ -475,21 +457,11 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     });
                     const base64Audio = await blobToBase64Raw(audioBlob);
                     const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
-                    const start = target.selectionStart ?? 0;
-                    const end = start + transcript.length;
-                    const oldValue = target.value;
-                    target.value = oldValue.slice(0, start) + transcript + oldValue.slice(start);
-                    onChangeText(oldValue.slice(0, start) + transcript + oldValue.slice(start));
-                    const logItem = {
-                        id: crypto.randomUUID(),
-                        audioBase64: base64Audio,
-                        aiTranscript: transcript,
-                        startIndex: start,
-                        endIndex: end,
-                        finalText: transcript,
-                        timestamp: new Date().toISOString()
-                    };
-                    voiceLogs.push(logItem);
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    const text = target.value;
+                    target.value = text.slice(0, start) + transcript + text.slice(end);
+                    onChangeText(text.slice(0, start) + transcript + text.slice(end));
                     restoreMicIcon();
                 };
                 mediaRecorder.start();
