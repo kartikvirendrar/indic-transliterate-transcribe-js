@@ -468,7 +468,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                         base64Audio: base64Audio,
                         transcript: transcript,
                         originalText: transcript,
-                        correctedText: transcript,
+                        correctedText: "",
                         startIndex: start,
                         endIndex: start + transcript.length
                     });
@@ -482,9 +482,12 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
-            voiceLogs.forEach((chunk)=>{
-                const corrected = currentValue.slice(chunk.startIndex, chunk.endIndex);
-                chunk.correctedText = corrected;
+            voiceLogs.forEach((log)=>{
+                const index = currentValue.indexOf(log.transcript);
+                if (index !== -1) {
+                    const corrected = currentValue.slice(index, index + log.transcript.length);
+                    log.correctedText = corrected;
+                }
             });
             lastTextValue = currentValue;
         });
