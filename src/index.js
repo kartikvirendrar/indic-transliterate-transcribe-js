@@ -407,6 +407,8 @@ export const IndicTransliterate = ({
     wrapper.appendChild(micBtn);
 
     let mediaRecorder, audioChunks = [], isRecording = false;
+    const voiceLogs = [];
+    let lastTextValue = target.value;
 
     const showLoader = () => {
       micBtn.innerHTML = "";
@@ -450,9 +452,20 @@ export const IndicTransliterate = ({
 
           const start = target.selectionStart;
           const end = target.selectionEnd;
-          const text = target.value;
-          target.value = text.slice(0, start) + transcript + text.slice(end);
-          onChangeText(text.slice(0, start) + transcript + text.slice(end));
+          const currentText = target.value;
+
+          target.value = currentText.slice(0, start) + transcript + currentText.slice(end);
+          onChangeText(currentText.slice(0, start) + transcript + currentText.slice(end));
+          voiceLogs.push({
+            base64Audio,
+            transcript,
+            originalText: transcript,
+            correctedText: transcript,
+            startIndex: start,
+            endIndex: start + transcript.length
+          });
+
+          lastTextValue = target.value;
           restoreMicIcon();
         };
 
