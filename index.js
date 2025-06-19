@@ -397,6 +397,32 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
     }, [
         lang
     ]);
+    let voiceLogs = [];
+    let lastTextValue = "";
+    function uuidv4() {
+        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c)=>(c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    }
+    function diffStrings(prev, next) {
+        let i = 0;
+        while(i < prev.length && i < next.length && prev[i] === next[i])i++;
+        let j = 0;
+        while(prev.length - 1 - j >= i && next.length - 1 - j >= i && prev[prev.length - 1 - j] === next[next.length - 1 - j])j++;
+        return {
+            idx: i,
+            removed: prev.slice(i, prev.length - j),
+            added: next.slice(i, next.length - j)
+        };
+    }
+    function updateVoiceLogPositions(logs, oldText, newText) {
+        const diff = diffStrings(oldText, newText);
+        const shift = diff.added.length - diff.removed.length;
+        logs.forEach((log)=>{
+            if (log.start >= diff.idx) {
+                log.start += shift;
+                log.end += shift;
+            } else if (log.end > diff.idx) log.end += shift;
+        });
+    }
     const enableVoiceTyping = ()=>{
         const target = inputRef.current;
         if (!target) return;
@@ -422,8 +448,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         wrapper.appendChild(target);
         wrapper.appendChild(micBtn);
         let mediaRecorder, audioChunks = [], isRecording = false;
-        const voiceLogs = [];
-        let lastTextValue = target.value;
         const showLoader = ()=>{
             micBtn.innerHTML = "";
             const spinner = document.createElement("div");
@@ -459,20 +483,20 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     });
                     const base64Audio = await blobToBase64Raw(audioBlob);
                     const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
-                    const start = target.selectionStart;
-                    const end = target.selectionEnd;
-                    const currentText = target.value;
-                    target.value = currentText.slice(0, start) + transcript + currentText.slice(end);
-                    onChangeText(currentText.slice(0, start) + transcript + currentText.slice(end));
+                    const { selectionStart: selectionStart, selectionEnd: selectionEnd, value: value } = target;
+                    const newText = value.slice(0, selectionStart) + transcript + value.slice(selectionEnd);
+                    target.value = newText;
+                    const chunkId = uuidv4();
                     voiceLogs.push({
-                        base64Audio: base64Audio,
-                        transcript: transcript,
-                        originalText: transcript,
-                        correctedText: transcript,
-                        startIndex: start,
-                        endIndex: start + transcript.length
+                        id: chunkId,
+                        audio_base64: base64Audio,
+                        asr_output: transcript,
+                        user_correction: transcript,
+                        start: selectionStart,
+                        end: selectionStart + transcript.length
                     });
-                    lastTextValue = target.value;
+                    lastTextValue = newText;
+                    onChangeText(newText);
                     restoreMicIcon();
                 };
                 mediaRecorder.start();
@@ -480,30 +504,26 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 restoreStopIcon();
             }
         };
-        target.addEventListener("input", ()=>{
+        target.addEventListener("input", function handler() {
             const currentValue = target.value;
-            const oldValue = lastTextValue;
-            const changeLength = currentValue.length - oldValue.length;
-            let changeIndex = 0;
-            while(changeIndex < oldValue.length && oldValue[changeIndex] === currentValue[changeIndex])changeIndex++;
+            updateVoiceLogPositions(voiceLogs, lastTextValue, currentValue);
             voiceLogs.forEach((log)=>{
-                if (log.startIndex > changeIndex) {
-                    log.startIndex += changeLength;
-                    log.endIndex += changeLength;
-                } else if (log.endIndex >= changeIndex) {
-                    const newCorrected = currentValue.slice(log.startIndex, log.endIndex + changeLength);
-                    log.correctedText = newCorrected;
-                    log.endIndex = log.startIndex + newCorrected.length;
+                if (log.start < 0 || log.end > currentValue.length || log.start === log.end) {
+                    log.deleted = true;
+                    log.user_correction = "";
+                } else {
+                    log.user_correction = currentValue.slice(log.start, log.end);
+                    log.deleted = false;
                 }
             });
             lastTextValue = currentValue;
         });
         setInterval(()=>{
-            if (voiceLogs.length > 0) {
-                const logsToSend = voiceLogs.map((log)=>({
-                        audioBase64: log.base64Audio,
-                        transcript: log.transcript,
-                        correctedText: log.correctedText
+            if (voiceLogs.length) {
+                const logsToSend = voiceLogs.filter((log)=>!log.deleted).map(({ audio_base64: audio_base64, asr_output: asr_output, user_correction: user_correction })=>({
+                        audio_base64: audio_base64,
+                        asr_output: asr_output,
+                        user_correction: user_correction
                     }));
                 fetch("https://dmoapi.com/save-logs", {
                     method: "POST",
