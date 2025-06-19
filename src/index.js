@@ -479,7 +479,7 @@ export const IndicTransliterate = ({
       const currentValue = target.value;
       const oldValue = lastTextValue;
     
-      const diff = currentValue.length - oldValue.length;
+      const changeLength = currentValue.length - oldValue.length;
     
       let changeIndex = 0;
       while (
@@ -491,17 +491,20 @@ export const IndicTransliterate = ({
     
       voiceLogs.forEach(log => {
         if (log.startIndex > changeIndex) {
-          log.startIndex += diff;
-          log.endIndex += diff;
-        } else if (log.endIndex >= changeIndex) {
-          const corrected = currentValue.slice(log.startIndex, log.endIndex + diff);
-          log.correctedText = corrected;
-          log.endIndex = log.startIndex + corrected.length;
+          log.startIndex += changeLength;
+          log.endIndex += changeLength;
+        }
+        else if (log.endIndex >= changeIndex) {
+          const newCorrected = currentValue.slice(log.startIndex, log.endIndex + changeLength);
+          log.correctedText = newCorrected;
+          log.endIndex = log.startIndex + newCorrected.length;
         }
       });
     
       lastTextValue = currentValue;
     });
+    
+    
   
     setInterval(() => {
       if (voiceLogs.length > 0) {
