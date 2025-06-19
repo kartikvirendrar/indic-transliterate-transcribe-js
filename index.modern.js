@@ -454,6 +454,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     voiceLogs.push({
                         base64Audio: base64Audio,
                         transcript: transcript,
+                        originalText: transcript,
                         correctedText: transcript,
                         startIndex: start,
                         endIndex: start + transcript.length
