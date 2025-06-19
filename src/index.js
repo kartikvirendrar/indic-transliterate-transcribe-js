@@ -459,6 +459,7 @@ export const IndicTransliterate = ({
           voiceLogs.push({
             base64Audio,
             transcript,
+            originalText: transcript,
             correctedText: transcript,
             startIndex: start,
             endIndex: start + transcript.length
