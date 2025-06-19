@@ -402,27 +402,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
     function uuidv4() {
         return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c)=>(c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
     }
-    function diffStrings(prev, next) {
-        let i = 0;
-        while(i < prev.length && i < next.length && prev[i] === next[i])i++;
-        let j = 0;
-        while(prev.length - 1 - j >= i && next.length - 1 - j >= i && prev[prev.length - 1 - j] === next[next.length - 1 - j])j++;
-        return {
-            idx: i,
-            removed: prev.slice(i, prev.length - j),
-            added: next.slice(i, next.length - j)
-        };
-    }
-    function updateVoiceLogPositions(logs, oldText, newText) {
-        const diff = diffStrings(oldText, newText);
-        const shift = diff.added.length - diff.removed.length;
-        logs.forEach((log)=>{
-            if (log.start >= diff.idx) {
-                log.start += shift;
-                log.end += shift;
-            } else if (log.end > diff.idx) log.end += shift;
-        });
-    }
     const enableVoiceTyping = ()=>{
         const target = inputRef.current;
         if (!target) return;
@@ -506,16 +485,19 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         target.addEventListener("input", function handler() {
             const currentValue = target.value;
-            updateVoiceLogPositions(voiceLogs, lastTextValue, currentValue);
-            voiceLogs.forEach((log)=>{
-                if (log.start < 0 || log.end > currentValue.length || log.start === log.end) {
-                    log.deleted = true;
-                    log.user_correction = "";
-                } else {
-                    log.user_correction = currentValue.slice(log.start, log.end);
-                    log.deleted = false;
-                }
-            });
+            const activeLogs = voiceLogs.filter((log)=>!log.deleted).sort((a, b)=>a.start - b.start);
+            let lastEnd = 0;
+            for(let i = 0; i < activeLogs.length; i++){
+                const log = activeLogs[i];
+                let nextLog = activeLogs[i + 1];
+                let nextIdx = -1;
+                if (nextLog && nextLog.user_correction) nextIdx = currentValue.indexOf(nextLog.user_correction, lastEnd);
+                log.start = lastEnd;
+                log.end = nextIdx > -1 ? nextIdx : currentValue.length;
+                log.user_correction = currentValue.slice(log.start, log.end);
+                log.deleted = log.user_correction.trim().length === 0;
+                lastEnd = log.end;
+            }
             lastTextValue = currentValue;
         });
         setInterval(()=>{
