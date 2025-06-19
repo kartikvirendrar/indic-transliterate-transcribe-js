@@ -485,18 +485,28 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         target.addEventListener("input", function handler() {
             const currentValue = target.value;
-            const activeLogs = voiceLogs.filter((log)=>!log.deleted).sort((a, b)=>a.start - b.start);
-            let lastEnd = 0;
-            for(let i = 0; i < activeLogs.length; i++){
-                const log = activeLogs[i];
-                let nextLog = activeLogs[i + 1];
-                let nextIdx = -1;
-                if (nextLog && nextLog.user_correction) nextIdx = currentValue.indexOf(nextLog.user_correction, lastEnd);
-                log.start = lastEnd;
-                log.end = nextIdx > -1 ? nextIdx : currentValue.length;
-                log.user_correction = currentValue.slice(log.start, log.end);
-                log.deleted = log.user_correction.trim().length === 0;
-                lastEnd = log.end;
+            const chunksSorted = voiceLogs.filter((log)=>!log.deleted).sort((a, b)=>a.createdAt - b.createdAt);
+            let cursor = 0;
+            for(let i = 0; i < chunksSorted.length; i++){
+                const thisChunk = chunksSorted[i];
+                let nextChunk = chunksSorted[i + 1];
+                let chunkStart = currentValue.indexOf(thisChunk.user_correction, cursor);
+                if (chunkStart === -1) chunkStart = currentValue.indexOf(thisChunk.asr_output, cursor);
+                if (chunkStart === -1) {
+                    thisChunk.deleted = true;
+                    continue;
+                }
+                let chunkEnd = currentValue.length;
+                if (nextChunk) {
+                    let nextStart = currentValue.indexOf(nextChunk.user_correction, chunkStart + thisChunk.user_correction.length);
+                    if (nextStart === -1) nextStart = currentValue.indexOf(nextChunk.asr_output, chunkStart + thisChunk.user_correction.length);
+                    if (nextStart !== -1) chunkEnd = nextStart;
+                }
+                thisChunk.start = chunkStart;
+                thisChunk.end = chunkEnd;
+                thisChunk.user_correction = currentValue.slice(chunkStart, chunkEnd);
+                thisChunk.deleted = thisChunk.user_correction.trim().length === 0;
+                cursor = chunkEnd;
             }
             lastTextValue = currentValue;
         });
