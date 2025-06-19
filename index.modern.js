@@ -454,8 +454,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     voiceLogs.push({
                         base64Audio: base64Audio,
                         transcript: transcript,
-                        originalText: transcript,
-                        correctedText: "",
+                        correctedText: transcript,
                         startIndex: start,
                         endIndex: start + transcript.length
                     });
@@ -469,11 +468,18 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
+            const oldValue = lastTextValue;
+            const diff = currentValue.length - oldValue.length;
+            let changeIndex = 0;
+            while(changeIndex < oldValue.length && oldValue[changeIndex] === currentValue[changeIndex])changeIndex++;
             voiceLogs.forEach((log)=>{
-                const index = currentValue.indexOf(log.transcript);
-                if (index !== -1) {
-                    const corrected = currentValue.slice(index, index + log.transcript.length);
+                if (log.startIndex > changeIndex) {
+                    log.startIndex += diff;
+                    log.endIndex += diff;
+                } else if (log.endIndex >= changeIndex) {
+                    const corrected = currentValue.slice(log.startIndex, log.endIndex + diff);
                     log.correctedText = corrected;
+                    log.endIndex = log.startIndex + corrected.length;
                 }
             });
             lastTextValue = currentValue;
