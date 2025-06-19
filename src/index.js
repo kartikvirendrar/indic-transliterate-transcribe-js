@@ -490,27 +490,29 @@ export const IndicTransliterate = ({
       let cursor = 0;
       for (let i = 0; i < chunksSorted.length; i++) {
         const thisChunk = chunksSorted[i];
-        let nextChunk = chunksSorted[i + 1];
     
-        let chunkStart = currentValue.indexOf(thisChunk.user_correction, cursor);
-        if (chunkStart === -1) {
-          chunkStart = currentValue.indexOf(thisChunk.asr_output, cursor);
+        let thisStart = currentValue.indexOf(thisChunk.user_correction, cursor);
+        if (thisStart === -1) {
+          thisStart = currentValue.indexOf(thisChunk.asr_output, cursor);
         }
-        if (chunkStart === -1) {
+        if (thisStart === -1) {
           thisChunk.deleted = true;
           continue;
         }
+    
         let chunkEnd = currentValue.length;
-        if (nextChunk) {
-          let nextStart = currentValue.indexOf(nextChunk.user_correction, chunkStart + thisChunk.user_correction.length);
-          if (nextStart === -1)
-            nextStart = currentValue.indexOf(nextChunk.asr_output, chunkStart + thisChunk.user_correction.length);
+        if (i + 1 < chunksSorted.length) {
+          const nextChunk = chunksSorted[i + 1];
+          let nextStart = currentValue.indexOf(nextChunk.user_correction, thisStart + thisChunk.user_correction.length);
+          if (nextStart === -1) {
+            nextStart = currentValue.indexOf(nextChunk.asr_output, thisStart + thisChunk.user_correction.length);
+          }
           if (nextStart !== -1) chunkEnd = nextStart;
         }
     
-        thisChunk.start = chunkStart;
+        thisChunk.start = thisStart;
         thisChunk.end = chunkEnd;
-        thisChunk.user_correction = currentValue.slice(chunkStart, chunkEnd);
+        thisChunk.user_correction = currentValue.slice(thisStart, chunkEnd);
         thisChunk.deleted = thisChunk.user_correction.trim().length === 0;
         cursor = chunkEnd;
       }
