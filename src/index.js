@@ -479,28 +479,24 @@ export const IndicTransliterate = ({
     target.addEventListener("input", () => {
       const currentValue = target.value;
   
-      voiceLogs.forEach((chunk, index) => {
-      const currentTextChunk = currentValue.slice(chunk.startIndex, chunk.endIndex);
+      voiceLogs.forEach(chunk => {
+        const currentTextChunk = currentValue.slice(chunk.startIndex, chunk.endIndex);
 
-      if (currentTextChunk !== chunk.correctedText) {
+        if (currentTextChunk !== chunk.correctedText) {
           chunk.correctedText = currentTextChunk;
+          chunk.endIndex = chunk.startIndex + chunk.correctedText.length;
+        }
 
-          if (currentValue.indexOf(chunk.correctedText, chunk.startIndex) === -1) {
-              chunk.startIndex = currentValue.indexOf(chunk.correctedText);
-              chunk.endIndex = chunk.startIndex + chunk.correctedText.length;
-              return;
+        let offset = 0;
+        for (let i = 0; i < voiceLogs.length; i++) {
+          if (i !== 0) { 
+            const previousChunk = voiceLogs[i - 1];
+            voiceLogs[i].startIndex = previousChunk.endIndex + offset;
+            voiceLogs[i].endIndex = voiceLogs[i].startIndex + voiceLogs[i].correctedText.length;
+            offset = voiceLogs[i].endIndex - voiceLogs[i].startIndex;
           }
-
-          chunk.endIndex = chunk.startIndex + currentTextChunk.length;
-      }
-
-      if (index < voiceLogs.length - 1) {
-          const nextChunk = voiceLogs[index + 1];
-          if (chunk.endIndex > nextChunk.startIndex) { 
-              nextChunk.startIndex = chunk.endIndex;
-              nextChunk.endIndex = nextChunk.startIndex + nextChunk.correctedText.length;
-          }
-      }});
+        }
+      });
     });
     
     setInterval(() => {
