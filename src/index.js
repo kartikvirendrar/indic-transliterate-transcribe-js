@@ -439,6 +439,7 @@ export const IndicTransliterate = ({
         mediaRecorder = new MediaRecorder(stream);
 
         audioChunks = [];
+        const sessionId = Date.now();
 
         mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
 
