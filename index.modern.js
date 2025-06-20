@@ -469,20 +469,20 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
+            let currentStartIndex = 0;
+            console.log("Current Input Value: ", currentValue);
             voiceLogs.forEach((chunk)=>{
-                const currentTextChunk = currentValue.slice(chunk.startIndex, chunk.endIndex);
-                if (currentTextChunk !== chunk.correctedText) {
-                    chunk.correctedText = currentTextChunk;
-                    chunk.endIndex = chunk.startIndex + chunk.correctedText.length;
-                }
-                let offset = 0;
-                for(let i = 0; i < voiceLogs.length; i++)if (i !== 0) {
-                    const previousChunk = voiceLogs[i - 1];
-                    voiceLogs[i].startIndex = previousChunk.endIndex + offset;
-                    voiceLogs[i].endIndex = voiceLogs[i].startIndex + voiceLogs[i].correctedText.length;
-                    offset = voiceLogs[i].endIndex - voiceLogs[i].startIndex;
-                }
+                const correctedText = currentValue.slice(currentStartIndex, currentStartIndex + chunk.correctedText.length);
+                chunk.correctedText = correctedText;
+                console.log(`Before Update - Chunk: ${chunk.transcript}`);
+                console.log(`Start Index: ${chunk.startIndex}, End Index: ${chunk.endIndex}`);
+                chunk.startIndex = currentStartIndex;
+                chunk.endIndex = currentStartIndex + correctedText.length;
+                console.log(`After Update - Corrected Text: ${chunk.correctedText}`);
+                console.log(`Updated Start Index: ${chunk.startIndex}, Updated End Index: ${chunk.endIndex}`);
+                currentStartIndex += correctedText.length;
             });
+            console.log("Updated Voice Logs: ", voiceLogs);
         });
         setInterval(()=>{
             if (voiceLogs.length > 0) {
