@@ -397,11 +397,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
     }, [
         lang
     ]);
-    let voiceLogs = [];
-    let lastTextValue = "";
-    function uuidv4() {
-        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c)=>(c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
-    }
     const enableVoiceTyping = ()=>{
         const target = inputRef.current;
         if (!target) return;
@@ -462,22 +457,20 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     });
                     const base64Audio = await blobToBase64Raw(audioBlob);
                     const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
-                    const { selectionStart: selectionStart, selectionEnd: selectionEnd, value: value } = target;
-                    const newText = value.slice(0, selectionStart) + transcript + value.slice(selectionEnd);
-                    target.value = newText;
-                    const chunkId = uuidv4();
-                    const now = Date.now();
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    const currentText = target.value;
+                    target.value = currentText.slice(0, start) + transcript + currentText.slice(end);
+                    onChangeText(currentText.slice(0, start) + transcript + currentText.slice(end));
                     voiceLogs.push({
-                        id: chunkId,
-                        createdAt: now,
-                        audio_base64: base64Audio,
-                        asr_output: transcript,
-                        user_correction: transcript,
-                        start: selectionStart,
-                        end: selectionStart + transcript.length
+                        sessionId: sessionId,
+                        base64Audio: base64Audio,
+                        transcript: transcript,
+                        originalText: transcript,
+                        correctedText: transcript,
+                        startIndex: start,
+                        endIndex: start + transcript.length
                     });
-                    lastTextValue = newText;
-                    onChangeText(newText);
                     restoreMicIcon();
                 };
                 mediaRecorder.start();
@@ -485,37 +478,34 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 restoreStopIcon();
             }
         };
-        target.addEventListener("input", function handler() {
+        target.addEventListener("input", ()=>{
             const currentValue = target.value;
-            const logs = voiceLogs.filter((l)=>!l.deleted).sort((a, b)=>a.createdAt - b.createdAt);
-            let cursor = 0;
-            for(let i = 0; i < logs.length; i++){
-                const thisChunk = logs[i];
-                let chunkStart = cursor;
-                let chunkEnd = currentValue.length;
-                if (i + 1 < logs.length) {
-                    const nextChunk = logs[i + 1];
-                    let foundNext = -1;
-                    if (nextChunk.user_correction && currentValue.includes(nextChunk.user_correction, chunkStart)) foundNext = currentValue.indexOf(nextChunk.user_correction, chunkStart);
-                    else if (nextChunk.asr_output && currentValue.includes(nextChunk.asr_output, chunkStart)) foundNext = currentValue.indexOf(nextChunk.asr_output, chunkStart);
-                    if (foundNext !== -1) chunkEnd = foundNext;
+            voiceLogs.forEach((chunk, index)=>{
+                const currentTextChunk = currentValue.slice(chunk.startIndex, chunk.endIndex);
+                if (currentTextChunk !== chunk.correctedText) {
+                    chunk.correctedText = currentTextChunk;
+                    if (currentValue.indexOf(chunk.correctedText, chunk.startIndex) === -1) {
+                        chunk.startIndex = currentValue.indexOf(chunk.correctedText);
+                        chunk.endIndex = chunk.startIndex + chunk.correctedText.length;
+                        return;
+                    }
+                    chunk.endIndex = chunk.startIndex + currentTextChunk.length;
                 }
-                if (chunkStart > chunkEnd) chunkStart = cursor;
-                if (chunkEnd > currentValue.length) chunkEnd = currentValue.length;
-                thisChunk.start = chunkStart;
-                thisChunk.end = chunkEnd;
-                thisChunk.user_correction = currentValue.slice(chunkStart, chunkEnd);
-                thisChunk.deleted = thisChunk.user_correction.trim().length === 0;
-                cursor = chunkEnd;
-            }
-            lastTextValue = currentValue;
+                if (index < voiceLogs.length - 1) {
+                    const nextChunk = voiceLogs[index + 1];
+                    if (chunk.endIndex > nextChunk.startIndex) {
+                        nextChunk.startIndex = chunk.endIndex;
+                        nextChunk.endIndex = nextChunk.startIndex + nextChunk.correctedText.length;
+                    }
+                }
+            });
         });
         setInterval(()=>{
-            if (voiceLogs.length) {
-                const logsToSend = voiceLogs.filter((log)=>!log.deleted).map(({ audio_base64: audio_base64, asr_output: asr_output, user_correction: user_correction })=>({
-                        audio_base64: audio_base64,
-                        asr_output: asr_output,
-                        user_correction: user_correction
+            if (voiceLogs.length > 0) {
+                const logsToSend = voiceLogs.map((log)=>({
+                        audioBase64: log.base64Audio,
+                        transcript: log.transcript,
+                        correctedText: log.correctedText
                     }));
                 fetch("https://dmoapi.com/save-logs", {
                     method: "POST",
