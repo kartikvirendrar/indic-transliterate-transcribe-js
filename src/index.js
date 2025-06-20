@@ -461,8 +461,10 @@ export const IndicTransliterate = ({
           target.value = newText;
 
           const chunkId = uuidv4();
+          const now = Date.now();
           voiceLogs.push({
             id: chunkId,
+            createdAt: now,
             audio_base64: base64Audio,
             asr_output: transcript,
             user_correction: transcript,
@@ -483,36 +485,41 @@ export const IndicTransliterate = ({
 
     target.addEventListener("input", function handler() {
       const currentValue = target.value;
-      const chunksSorted = voiceLogs
-        .filter(log => !log.deleted)
-        .sort((a, b) => a.createdAt - b.createdAt);
+      const logs = voiceLogs.filter(l => !l.deleted).sort((a, b) => a.createdAt - b.createdAt);
     
       let cursor = 0;
-      for (let i = 0; i < chunksSorted.length; i++) {
-        const thisChunk = chunksSorted[i];
-    
-        let thisStart = currentValue.indexOf(thisChunk.user_correction, cursor);
-        if (thisStart === -1) {
-          thisStart = currentValue.indexOf(thisChunk.asr_output, cursor);
-        }
-        if (thisStart === -1) {
-          thisChunk.deleted = true;
-          continue;
-        }
+      for (let i = 0; i < logs.length; i++) {
+        const thisChunk = logs[i];
+        let chunkStart = cursor;
     
         let chunkEnd = currentValue.length;
-        if (i + 1 < chunksSorted.length) {
-          const nextChunk = chunksSorted[i + 1];
-          let nextStart = currentValue.indexOf(nextChunk.user_correction, thisStart + thisChunk.user_correction.length);
-          if (nextStart === -1) {
-            nextStart = currentValue.indexOf(nextChunk.asr_output, thisStart + thisChunk.user_correction.length);
+        if (i + 1 < logs.length) {
+          const nextChunk = logs[i + 1];
+    
+          let foundNext = -1;
+          if (
+            nextChunk.user_correction &&
+            currentValue.includes(nextChunk.user_correction, chunkStart)
+          ) {
+            foundNext = currentValue.indexOf(nextChunk.user_correction, chunkStart);
+          } else if (
+            nextChunk.asr_output &&
+            currentValue.includes(nextChunk.asr_output, chunkStart)
+          ) {
+            foundNext = currentValue.indexOf(nextChunk.asr_output, chunkStart);
           }
-          if (nextStart !== -1) chunkEnd = nextStart;
+          if (foundNext !== -1) {
+            chunkEnd = foundNext;
+          }
         }
     
-        thisChunk.start = thisStart;
+        if (chunkStart > chunkEnd) chunkStart = cursor;
+        if (chunkEnd > currentValue.length) chunkEnd = currentValue.length;
+    
+        thisChunk.start = chunkStart;
         thisChunk.end = chunkEnd;
-        thisChunk.user_correction = currentValue.slice(thisStart, chunkEnd);
+        thisChunk.user_correction = currentValue.slice(chunkStart, chunkEnd);
+    
         thisChunk.deleted = thisChunk.user_correction.trim().length === 0;
         cursor = chunkEnd;
       }
