@@ -483,24 +483,23 @@ export const IndicTransliterate = ({
       console.log("Current Input Value: ", currentValue);
   
       voiceLogs.forEach(chunk => {
-          const correctedText = currentValue.slice(currentStartIndex, currentStartIndex + chunk.correctedText.length);
-  
-          chunk.correctedText = correctedText;
-  
-          console.log(`Before Update - Chunk: ${chunk.transcript}`);
-          console.log(`Start Index: ${chunk.startIndex}, End Index: ${chunk.endIndex}`);
-          
-          chunk.startIndex = currentStartIndex;
-          chunk.endIndex = currentStartIndex + correctedText.length;
-  
-          console.log(`After Update - Corrected Text: ${chunk.correctedText}`);
-          console.log(`Updated Start Index: ${chunk.startIndex}, Updated End Index: ${chunk.endIndex}`);
-          
-          currentStartIndex += correctedText.length;
+        const correctedText = currentValue.slice(currentStartIndex).split(chunk.correctedText)[0] + chunk.correctedText;
+        
+        console.log(`Before Update - Chunk: ${chunk.transcript}`);
+        console.log(`Start Index: ${chunk.startIndex}, End Index: ${chunk.endIndex}`);
+
+        chunk.correctedText = correctedText;
+        chunk.startIndex = currentStartIndex;
+        chunk.endIndex = currentStartIndex + correctedText.length;
+
+        console.log(`After Update - Corrected Text: ${chunk.correctedText}`);
+        console.log(`Updated Start Index: ${chunk.startIndex}, Updated End Index: ${chunk.endIndex}`);
+
+        currentStartIndex = chunk.endIndex;
       });
   
       console.log("Updated Voice Logs: ", voiceLogs);
-    });
+     });
     
     setInterval(() => {
       if (voiceLogs.length > 0) {
