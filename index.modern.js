@@ -437,6 +437,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
+                const sessionId = Date.now();
                 mediaRecorder.ondataavailable = (event)=>audioChunks.push(event.data);
                 mediaRecorder.onstop = async ()=>{
                     showLoader();
