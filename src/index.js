@@ -479,12 +479,15 @@ export const IndicTransliterate = ({
     target.addEventListener("input", () => {
       const currentValue = target.value;
   
-      let currentStartIndex = 0;
       console.log("Current Input Value: ", currentValue);
   
-      voiceLogs.forEach(chunk => {
-        const correctedText = currentValue.slice(currentStartIndex).split(chunk.correctedText)[0] + chunk.correctedText;
-        
+      let currentStartIndex = 0;
+  
+      voiceLogs.forEach((chunk, index) => {
+        const nextChunkStartIndex = index < voiceLogs.length - 1 ? voiceLogs[index + 1].startIndex : currentValue.length;
+
+        const correctedText = currentValue.slice(currentStartIndex, nextChunkStartIndex);
+
         console.log(`Before Update - Chunk: ${chunk.transcript}`);
         console.log(`Start Index: ${chunk.startIndex}, End Index: ${chunk.endIndex}`);
 
@@ -499,7 +502,7 @@ export const IndicTransliterate = ({
       });
   
       console.log("Updated Voice Logs: ", voiceLogs);
-     });
+    });
     
     setInterval(() => {
       if (voiceLogs.length > 0) {
