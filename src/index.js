@@ -407,6 +407,7 @@ export const IndicTransliterate = ({
     wrapper.appendChild(micBtn);
 
     let mediaRecorder, audioChunks = [], isRecording = false;
+    const voiceLogs = [];
 
     const showLoader = () => {
       micBtn.innerHTML = "";
