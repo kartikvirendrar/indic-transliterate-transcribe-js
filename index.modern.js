@@ -470,23 +470,18 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
             console.log("Current Input Value: ", currentValue);
-            let cumulativeLength = 0;
-            voiceLogs.forEach((chunk, index)=>{
-                const isLastChunk = index === voiceLogs.length - 1;
-                const nextChunkStartIndex = isLastChunk ? currentValue.length : voiceLogs[index + 1].startIndex;
-                const expectedLength = chunk.endIndex - chunk.startIndex;
-                const actualText = currentValue.slice(cumulativeLength, cumulativeLength + expectedLength);
-                const correctedLength = actualText.length;
-                const lengthDiff = correctedLength - expectedLength;
+            let currentStartIndex = 0;
+            voiceLogs.forEach((chunk)=>{
+                const currentText = currentValue.slice(currentStartIndex);
+                const correctedLength = Math.min(currentText.length, chunk.correctedText.length);
+                chunk.correctedText = currentText.slice(0, correctedLength);
+                chunk.startIndex = currentStartIndex;
+                chunk.endIndex = currentStartIndex + correctedLength;
                 console.log(`Before Update - Chunk: ${chunk.transcript}`);
                 console.log(`Start Index: ${chunk.startIndex}, End Index: ${chunk.endIndex}`);
-                chunk.correctedText = actualText;
-                chunk.startIndex = cumulativeLength;
-                chunk.endIndex = cumulativeLength + correctedLength;
                 console.log(`After Update - Corrected Text: ${chunk.correctedText}`);
                 console.log(`Updated Start Index: ${chunk.startIndex}, Updated End Index: ${chunk.endIndex}`);
-                cumulativeLength += correctedLength + lengthDiff;
-                if (!isLastChunk) voiceLogs[index + 1].startIndex = chunk.endIndex;
+                currentStartIndex = chunk.endIndex;
             });
             console.log("Updated Voice Logs: ", voiceLogs);
         });
