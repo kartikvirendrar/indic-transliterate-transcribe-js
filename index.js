@@ -451,7 +451,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                const sessionId = Date.now();
                 mediaRecorder.ondataavailable = (event)=>audioChunks.push(event.data);
                 mediaRecorder.onstop = async ()=>{
                     showLoader();
@@ -460,22 +459,28 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     });
                     const base64Audio = await blobToBase64Raw(audioBlob);
                     const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
-                    const start = target.selectionStart;
-                    const end = target.selectionEnd;
+                    const cursorPos = target.selectionStart;
                     const currentText = target.value;
-                    target.value = currentText.slice(0, start) + transcript + currentText.slice(end);
-                    onChangeText(currentText.slice(0, start) + transcript + currentText.slice(end));
-                    console.log("Before Mic Voice Logs: ", voiceLogs);
-                    voiceLogs.push({
-                        sessionId: sessionId,
-                        base64Audio: base64Audio,
-                        transcript: transcript,
-                        originalText: transcript,
-                        correctedText: transcript,
-                        startIndex: start,
-                        endIndex: start + transcript.length
+                    const transcriptLength = transcript.length;
+                    target.value = currentText.slice(0, cursorPos) + transcript + currentText.slice(cursorPos);
+                    onChangeText(target.value);
+                    voiceLogs.forEach((log)=>{
+                        if (log.start >= cursorPos) {
+                            log.start += transcriptLength;
+                            log.end += transcriptLength;
+                        }
                     });
-                    console.log("After Mic Voice Logs: ", voiceLogs);
+                    const newLog = {
+                        id: Date.now(),
+                        audioBase64: base64Audio,
+                        initialTranscript: transcript,
+                        correctedText: transcript,
+                        start: cursorPos,
+                        end: cursorPos + transcriptLength
+                    };
+                    voiceLogs.push(newLog);
+                    voiceLogs.sort((a, b)=>a.start - b.start);
+                    console.log("New transcript added and logs sorted:", voiceLogs);
                     lastTextValue = target.value;
                     restoreMicIcon();
                 };
@@ -486,32 +491,28 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
-            const lengthChange = currentValue.length - lastTextValue.length;
-            let editStartIndex = 0;
-            while(editStartIndex < lastTextValue.length && editStartIndex < currentValue.length && lastTextValue[editStartIndex] === currentValue[editStartIndex])editStartIndex++;
-            console.log(`Change detected at index: ${editStartIndex}, Length change: ${lengthChange}`);
-            voiceLogs.forEach((chunk)=>{
-                console.log(`Processing chunk: "${chunk.transcript}", Before - Start: ${chunk.startIndex}, End: ${chunk.endIndex}`);
-                if (editStartIndex <= chunk.startIndex) {
-                    chunk.startIndex += lengthChange;
-                    chunk.endIndex += lengthChange;
-                    console.log(`   -> Edit was BEFORE chunk. Shifted indices.`);
-                } else if (editStartIndex > chunk.startIndex && editStartIndex <= chunk.endIndex) {
-                    chunk.endIndex += lengthChange;
-                    console.log(`   -> Edit was INSIDE chunk. Shifted end index.`);
-                } else console.log(`   -> Edit was AFTER chunk. No index change.`);
-                chunk.correctedText = currentValue.slice(chunk.startIndex, chunk.endIndex);
-                console.log(`   After - Start: ${chunk.startIndex}, End: ${chunk.endIndex}, Corrected Text: "${chunk.correctedText}"`);
+            let changeStart = 0;
+            while(changeStart < lastTextValue.length && changeStart < currentValue.length && lastTextValue[changeStart] === currentValue[changeStart])changeStart++;
+            const lengthDelta = currentValue.length - lastTextValue.length;
+            voiceLogs.forEach((log)=>{
+                if (changeStart > log.end) return;
+                if (changeStart <= log.start) {
+                    log.start += lengthDelta;
+                    log.end += lengthDelta;
+                }
+                if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
+                log.correctedText = currentValue.slice(log.start, log.end);
             });
+            voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
+            console.log("Text corrected, logs updated:", voiceLogs);
             lastTextValue = currentValue;
-            console.log("--- Input event finished ---", voiceLogs);
         });
         setInterval(()=>{
             if (voiceLogs.length > 0) {
                 const logsToSend = voiceLogs.map((log)=>({
-                        audioBase64: log.base64Audio,
-                        transcript: log.transcript,
-                        correctedText: log.correctedText
+                        voice_input_base64_string: log.audioBase64,
+                        output_from_api: log.initialTranscript,
+                        final_corrected_text: log.correctedText
                     }));
                 fetch("https://dmoapi.com/save-logs", {
                     method: "POST",
