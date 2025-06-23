@@ -470,18 +470,64 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
             console.log("Current Input Value: ", currentValue);
-            let currentStartIndex = 0;
-            voiceLogs.forEach((chunk)=>{
-                const currentText = currentValue.slice(currentStartIndex);
-                const correctedLength = Math.min(currentText.length, chunk.correctedText.length);
-                chunk.correctedText = currentText.slice(0, correctedLength);
-                chunk.startIndex = currentStartIndex;
-                chunk.endIndex = currentStartIndex + correctedLength;
-                console.log(`Before Update - Chunk: ${chunk.transcript}`);
-                console.log(`Start Index: ${chunk.startIndex}, End Index: ${chunk.endIndex}`);
-                console.log(`After Update - Corrected Text: ${chunk.correctedText}`);
+            let previousValue = ""; // Track the previous value to detect changes
+            const detectChanges = (oldText, newText)=>{
+                let changes = [];
+                let i = 0, j = 0;
+                while(i < oldText.length || j < newText.length)if (oldText[i] !== newText[j]) {
+                    if (oldText.length - i > newText.length - j) {
+                        changes.push({
+                            type: 'deletion',
+                            index: i,
+                            length: 1
+                        });
+                        i++;
+                    } else if (oldText.length - i < newText.length - j) {
+                        changes.push({
+                            type: 'insertion',
+                            index: j,
+                            length: 1
+                        });
+                        j++;
+                    } else {
+                        changes.push({
+                            type: 'modification',
+                            index: i,
+                            length: 1
+                        });
+                        i++;
+                        j++;
+                    }
+                } else {
+                    i++;
+                    j++;
+                }
+                return changes;
+            };
+            const changes = detectChanges(previousValue, currentValue);
+            previousValue = currentValue;
+            voiceLogs.forEach((chunk, index)=>{
+                let totalShift = 0;
+                changes.forEach((change)=>{
+                    const { type: type, index: index, length: length } = change;
+                    if (index >= chunk.startIndex && index < chunk.endIndex) {
+                        if (type === 'insertion') totalShift += length;
+                        else if (type === 'deletion') totalShift -= length;
+                    } else if (index < chunk.startIndex) {
+                        if (type === 'insertion') {
+                            chunk.startIndex += length;
+                            chunk.endIndex += length;
+                        } else if (type === 'deletion') {
+                            chunk.startIndex -= length;
+                            chunk.endIndex -= length;
+                        }
+                    }
+                });
+                chunk.endIndex += totalShift;
+                chunk.correctedText = currentValue.slice(chunk.startIndex, chunk.endIndex);
+                console.log(`After Update - Chunk: ${chunk.transcript}`);
+                console.log(`Corrected Text: ${chunk.correctedText}`);
                 console.log(`Updated Start Index: ${chunk.startIndex}, Updated End Index: ${chunk.endIndex}`);
-                currentStartIndex = chunk.endIndex;
             });
             console.log("Updated Voice Logs: ", voiceLogs);
         });
