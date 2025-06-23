@@ -476,42 +476,43 @@ export const IndicTransliterate = ({
       }
     };
 
+    let previousValue = ""; 
+    
+    const detectChanges = (oldText, newText) => {
+      let changes = [];
+      let i = 0, j = 0;
+
+      while (i < oldText.length || j < newText.length) {
+        if (oldText[i] !== newText[j]) {
+          if ((oldText.length - i) > (newText.length - j)) {
+            changes.push({ type: 'deletion', index: i, length: 1 });
+            i++;
+          } else if ((oldText.length - i) < (newText.length - j)) {
+            changes.push({ type: 'insertion', index: j, length: 1 });
+            j++;
+          } else {
+            changes.push({ type: 'modification', index: i, length: 1 });
+            i++;
+            j++;
+          }
+        } else {
+          i++;
+          j++;
+        }
+      }
+      return changes;
+    };
+
     target.addEventListener("input", () => {
       const currentValue = target.value;
       console.log("Current Input Value: ", currentValue);
 
-      let previousValue = ""; // Track the previous value to detect changes
-
-      const detectChanges = (oldText, newText) => {
-        let changes = [];
-        let i = 0, j = 0;
-
-        while (i < oldText.length || j < newText.length) {
-          if (oldText[i] !== newText[j]) {
-            if ((oldText.length - i) > (newText.length - j)) {
-              changes.push({ type: 'deletion', index: i, length: 1 });
-              i++;
-            } else if ((oldText.length - i) < (newText.length - j)) {
-              changes.push({ type: 'insertion', index: j, length: 1 });
-              j++;
-            } else {
-              changes.push({ type: 'modification', index: i, length: 1 });
-              i++;
-              j++;
-            }
-          } else {
-            i++;
-            j++;
-          }
-        }
-        return changes;
-      };
-
       const changes = detectChanges(previousValue, currentValue);
       previousValue = currentValue;
 
-      voiceLogs.forEach((chunk, index) => {
+      voiceLogs.forEach(chunk => {
         let totalShift = 0;
+
         changes.forEach(change => {
           const { type, index, length } = change;
 
