@@ -422,7 +422,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         wrapper.appendChild(target);
         wrapper.appendChild(micBtn);
         let mediaRecorder, audioChunks = [], isRecording = false;
-        const voiceLogs = [];
+        let voiceLogs = [];
         let lastTextValue = target.value;
         const showLoader = ()=>{
             micBtn.innerHTML = "";
