@@ -464,7 +464,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     const currentText = target.value;
                     target.value = currentText.slice(0, insertionPoint) + transcript + currentText.slice(insertionPoint);
                     onChangeText(target.value);
-                    updateIndicesOnEdit(insertionPoint, transcriptLength);
                     voiceLogs.forEach((chunk)=>{
                         if (chunk.endIndex >= insertionPoint) chunk.endIndex += transcriptLength;
                     });
