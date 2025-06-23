@@ -478,7 +478,8 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             let derivedStartIndex = 0;
             voiceLogs.forEach((chunk)=>{
                 console.log(`Processing chunk: "${chunk.transcript}", Before - Start: ${derivedStartIndex}, End: ${chunk.endIndex}`);
-                if (editStartIndex <= chunk.endIndex) chunk.endIndex += lengthChange;
+                const originalEndIndex = chunk.endIndex;
+                if (editStartIndex <= originalEndIndex) chunk.endIndex += lengthChange;
                 chunk.correctedText = currentValue.slice(derivedStartIndex, chunk.endIndex);
                 console.log(`   After - Start: ${derivedStartIndex}, End: ${chunk.endIndex}, Corrected Text: "${chunk.correctedText}"`);
                 derivedStartIndex = chunk.endIndex;
