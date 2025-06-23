@@ -502,7 +502,9 @@ export const IndicTransliterate = ({
       voiceLogs.forEach(chunk => {
         console.log(`Processing chunk: "${chunk.transcript}", Before - Start: ${derivedStartIndex}, End: ${chunk.endIndex}`);
 
-        if (editStartIndex <= chunk.endIndex) {
+        const originalEndIndex = chunk.endIndex;
+
+        if (editStartIndex <= originalEndIndex) {
           chunk.endIndex += lengthChange;
         }
 
