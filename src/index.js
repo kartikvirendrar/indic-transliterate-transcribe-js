@@ -407,7 +407,7 @@ export const IndicTransliterate = ({
     wrapper.appendChild(micBtn);
 
     let mediaRecorder, audioChunks = [], isRecording = false;
-    const voiceLogs = [];
+    let voiceLogs = [];
     let lastTextValue = target.value;
 
     const showLoader = () => {
