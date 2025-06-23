@@ -451,6 +451,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     const currentText = target.value;
                     target.value = currentText.slice(0, start) + transcript + currentText.slice(end);
                     onChangeText(currentText.slice(0, start) + transcript + currentText.slice(end));
+                    console.log("Before Mic Voice Logs: ", voiceLogs);
                     voiceLogs.push({
                         sessionId: sessionId,
                         base64Audio: base64Audio,
@@ -460,6 +461,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                         startIndex: start,
                         endIndex: start + transcript.length
                     });
+                    console.log("After Mic Voice Logs: ", voiceLogs);
                     restoreMicIcon();
                 };
                 mediaRecorder.start();
@@ -506,10 +508,12 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             console.log("Current Input Value: ", currentValue);
             const changes = detectChanges(previousValue, currentValue);
             previousValue = currentValue;
-            voiceLogs.forEach((chunk)=>{
+            voiceLogs.forEach((chunk, index)=>{
                 let totalShift = 0;
+                console.log(`Initial Chunk Indices - Start: ${chunk.startIndex}, End: ${chunk.endIndex}`);
                 changes.forEach((change)=>{
                     const { type: type, index: index, length: length } = change;
+                    console.log(`Processing Change - Type: ${type}, Index: ${index}, Length: ${length}`);
                     if (index >= chunk.startIndex && index < chunk.endIndex) {
                         if (type === 'insertion') totalShift += length;
                         else if (type === 'deletion') totalShift -= length;
@@ -523,11 +527,11 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                         }
                     }
                 });
-                chunk.endIndex += totalShift;
+                if (index + 1 < voiceLogs.length) chunk.endIndex = Math.min(chunk.endIndex + totalShift, voiceLogs[index + 1].startIndex);
+                else chunk.endIndex += totalShift;
                 chunk.correctedText = currentValue.slice(chunk.startIndex, chunk.endIndex);
-                console.log(`After Update - Chunk: ${chunk.transcript}`);
+                console.log(`Updated Chunk Indices - Start: ${chunk.startIndex}, End: ${chunk.endIndex}`);
                 console.log(`Corrected Text: ${chunk.correctedText}`);
-                console.log(`Updated Start Index: ${chunk.startIndex}, Updated End Index: ${chunk.endIndex}`);
             });
             console.log("Updated Voice Logs: ", voiceLogs);
         });
