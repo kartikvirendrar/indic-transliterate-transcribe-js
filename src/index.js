@@ -425,22 +425,6 @@ export const IndicTransliterate = ({
       micBtn.innerHTML = '<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#ff2600" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>';
     };
 
-    const updateIndicesOnEdit = (editStartIndex, lengthChange) => {
-      console.log(`Updating indices based on edit at: ${editStartIndex}, length change: ${lengthChange}`);
-
-      voiceLogs.forEach(chunk => {
-        if (editStartIndex < chunk.endIndex) {
-          chunk.endIndex += lengthChange;
-        }
-      });
-
-      let derivedStartIndex = 0;
-      voiceLogs.forEach(chunk => {
-        chunk.correctedText = target.value.slice(derivedStartIndex, chunk.endIndex);
-        derivedStartIndex = chunk.endIndex;
-      });
-    };
-
     micBtn.onclick = async () => {
       if (!navigator.mediaDevices) {
         alert("Browser doesn't support audio recording.");
@@ -472,8 +456,7 @@ export const IndicTransliterate = ({
           const currentText = target.value;
           target.value = currentText.slice(0, insertionPoint) + transcript + currentText.slice(insertionPoint);
           onChangeText(target.value);
-          
-          console.log("Before mic", voiceLogs);
+
           updateIndicesOnEdit(insertionPoint, transcriptLength);
 
           voiceLogs.forEach(chunk => {
@@ -490,8 +473,14 @@ export const IndicTransliterate = ({
             endIndex: insertionPoint + transcriptLength
           });
           voiceLogs.sort((a, b) => a.endIndex - b.endIndex);
-          console.log("After mic", voiceLogs);
 
+          let derivedStartIndex = 0;
+          voiceLogs.forEach(chunk => {
+            chunk.correctedText = target.value.slice(derivedStartIndex, chunk.endIndex);
+            derivedStartIndex = chunk.endIndex;
+          });
+
+          console.log("After mic", voiceLogs);
           lastTextValue = target.value;
 
           restoreMicIcon();
@@ -516,10 +505,22 @@ export const IndicTransliterate = ({
         editStartIndex++;
       }
 
-      updateIndicesOnEdit(editStartIndex, lengthChange);
+      console.log(`Change detected at index: ${editStartIndex}, Length change: ${lengthChange}`);
+
+      voiceLogs.forEach(chunk => {
+        if (editStartIndex < chunk.endIndex) {
+          chunk.endIndex += lengthChange;
+        }
+      });
+
+      let derivedStartIndex = 0;
+      voiceLogs.forEach(chunk => {
+        chunk.correctedText = currentValue.slice(derivedStartIndex, chunk.endIndex);
+        derivedStartIndex = chunk.endIndex;
+      });
 
       lastTextValue = currentValue;
-      console.log("--- Input event finished ---", voiceLogs);
+      console.log("--- Manual input finished ---", voiceLogs);
     });
 
     setInterval(() => {
