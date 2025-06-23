@@ -408,6 +408,7 @@ export const IndicTransliterate = ({
 
     let mediaRecorder, audioChunks = [], isRecording = false;
     const voiceLogs = [];
+    let lastTextValue = target.value;
 
     const showLoader = () => {
       micBtn.innerHTML = "";
@@ -468,7 +469,8 @@ export const IndicTransliterate = ({
             endIndex: start + transcript.length
           });
           console.log("After Mic Voice Logs: ", voiceLogs);
-
+          
+          lastTextValue = target.value;
           restoreMicIcon();
         };
 
@@ -477,8 +479,6 @@ export const IndicTransliterate = ({
         restoreStopIcon();
       }
     };
-
-    let lastTextValue = target.value;
 
     target.addEventListener("input", () => {
       const currentValue = target.value;
