@@ -469,71 +469,28 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 restoreStopIcon();
             }
         };
-        let previousValue = "";
-        const detectChanges = (oldText, newText)=>{
-            let changes = [];
-            let i = 0, j = 0;
-            while(i < oldText.length || j < newText.length)if (oldText[i] !== newText[j]) {
-                if (oldText.length - i > newText.length - j) {
-                    changes.push({
-                        type: 'deletion',
-                        index: i,
-                        length: 1
-                    });
-                    i++;
-                } else if (oldText.length - i < newText.length - j) {
-                    changes.push({
-                        type: 'insertion',
-                        index: j,
-                        length: 1
-                    });
-                    j++;
-                } else {
-                    changes.push({
-                        type: 'modification',
-                        index: i,
-                        length: 1
-                    });
-                    i++;
-                    j++;
-                }
-            } else {
-                i++;
-                j++;
-            }
-            return changes;
-        };
+        let lastTextValue = target.value;
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
-            console.log("Current Input Value: ", currentValue);
-            const changes = detectChanges(previousValue, currentValue);
-            previousValue = currentValue;
-            voiceLogs.forEach((chunk, index)=>{
-                let totalShift = 0;
-                console.log(`Initial Chunk Indices - Start: ${chunk.startIndex}, End: ${chunk.endIndex}`);
-                changes.forEach((change)=>{
-                    const { type: type, index: index, length: length } = change;
-                    console.log(`Processing Change - Type: ${type}, Index: ${index}, Length: ${length}`);
-                    if (index >= chunk.startIndex && index < chunk.endIndex) {
-                        if (type === 'insertion') totalShift += length;
-                        else if (type === 'deletion') totalShift -= length;
-                    } else if (index < chunk.startIndex) {
-                        if (type === 'insertion') {
-                            chunk.startIndex += length;
-                            chunk.endIndex += length;
-                        } else if (type === 'deletion') {
-                            chunk.startIndex -= length;
-                            chunk.endIndex -= length;
-                        }
-                    }
-                });
-                if (index + 1 < voiceLogs.length) chunk.endIndex = Math.min(chunk.endIndex + totalShift, voiceLogs[index + 1].startIndex);
-                else chunk.endIndex += totalShift;
+            const lengthChange = currentValue.length - lastTextValue.length;
+            let editStartIndex = 0;
+            while(editStartIndex < lastTextValue.length && editStartIndex < currentValue.length && lastTextValue[editStartIndex] === currentValue[editStartIndex])editStartIndex++;
+            console.log(`Change detected at index: ${editStartIndex}, Length change: ${lengthChange}`);
+            voiceLogs.forEach((chunk)=>{
+                console.log(`Processing chunk: "${chunk.transcript}", Before - Start: ${chunk.startIndex}, End: ${chunk.endIndex}`);
+                if (editStartIndex <= chunk.startIndex) {
+                    chunk.startIndex += lengthChange;
+                    chunk.endIndex += lengthChange;
+                    console.log(`   -> Edit was BEFORE chunk. Shifted indices.`);
+                } else if (editStartIndex > chunk.startIndex && editStartIndex <= chunk.endIndex) {
+                    chunk.endIndex += lengthChange;
+                    console.log(`   -> Edit was INSIDE chunk. Shifted end index.`);
+                } else console.log(`   -> Edit was AFTER chunk. No index change.`);
                 chunk.correctedText = currentValue.slice(chunk.startIndex, chunk.endIndex);
-                console.log(`Updated Chunk Indices - Start: ${chunk.startIndex}, End: ${chunk.endIndex}`);
-                console.log(`Corrected Text: ${chunk.correctedText}`);
+                console.log(`   After - Start: ${chunk.startIndex}, End: ${chunk.endIndex}, Corrected Text: "${chunk.correctedText}"`);
             });
-            console.log("Updated Voice Logs: ", voiceLogs);
+            lastTextValue = currentValue;
+            console.log("--- Input event finished ---", voiceLogs);
         });
         setInterval(()=>{
             if (voiceLogs.length > 0) {
