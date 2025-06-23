@@ -410,6 +410,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         wrapper.appendChild(micBtn);
         let mediaRecorder, audioChunks = [], isRecording = false;
         const voiceLogs = [];
+        let lastTextValue = target.value;
         const showLoader = ()=>{
             micBtn.innerHTML = "";
             const spinner = document.createElement("div");
@@ -462,6 +463,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                         endIndex: start + transcript.length
                     });
                     console.log("After Mic Voice Logs: ", voiceLogs);
+                    lastTextValue = target.value;
                     restoreMicIcon();
                 };
                 mediaRecorder.start();
@@ -469,7 +471,6 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 restoreStopIcon();
             }
         };
-        let lastTextValue = target.value;
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
             const lengthChange = currentValue.length - lastTextValue.length;
