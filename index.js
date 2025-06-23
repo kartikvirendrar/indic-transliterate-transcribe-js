@@ -451,7 +451,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                const sessionId = Date.now();
                 mediaRecorder.ondataavailable = (event)=>audioChunks.push(event.data);
                 mediaRecorder.onstop = async ()=>{
                     showLoader();
@@ -460,22 +459,21 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     });
                     const base64Audio = await blobToBase64Raw(audioBlob);
                     const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
-                    const start = target.selectionStart;
-                    const end = target.selectionEnd;
-                    const currentText = target.value;
-                    target.value = currentText.slice(0, start) + transcript + currentText.slice(end);
-                    onChangeText(currentText.slice(0, start) + transcript + currentText.slice(end));
-                    console.log("Before Mic Voice Logs: ", voiceLogs);
+                    const insertionPoint = target.selectionStart;
+                    const transcriptLength = transcript.length;
+                    voiceLogs.forEach((chunk)=>{
+                        if (chunk.endIndex >= insertionPoint) chunk.endIndex += transcriptLength;
+                    });
                     voiceLogs.push({
-                        sessionId: sessionId,
                         base64Audio: base64Audio,
                         transcript: transcript,
                         originalText: transcript,
-                        correctedText: transcript,
-                        startIndex: start,
-                        endIndex: start + transcript.length
+                        endIndex: insertionPoint + transcriptLength
                     });
-                    console.log("After Mic Voice Logs: ", voiceLogs);
+                    voiceLogs.sort((a, b)=>a.endIndex - b.endIndex);
+                    const currentText = target.value;
+                    target.value = currentText.slice(0, insertionPoint) + transcript + currentText.slice(insertionPoint);
+                    onChangeText(target.value);
                     lastTextValue = target.value;
                     restoreMicIcon();
                 };
@@ -490,18 +488,13 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             let editStartIndex = 0;
             while(editStartIndex < lastTextValue.length && editStartIndex < currentValue.length && lastTextValue[editStartIndex] === currentValue[editStartIndex])editStartIndex++;
             console.log(`Change detected at index: ${editStartIndex}, Length change: ${lengthChange}`);
+            let derivedStartIndex = 0;
             voiceLogs.forEach((chunk)=>{
-                console.log(`Processing chunk: "${chunk.transcript}", Before - Start: ${chunk.startIndex}, End: ${chunk.endIndex}`);
-                if (editStartIndex <= chunk.startIndex) {
-                    chunk.startIndex += lengthChange;
-                    chunk.endIndex += lengthChange;
-                    console.log(`   -> Edit was BEFORE chunk. Shifted indices.`);
-                } else if (editStartIndex > chunk.startIndex && editStartIndex <= chunk.endIndex) {
-                    chunk.endIndex += lengthChange;
-                    console.log(`   -> Edit was INSIDE chunk. Shifted end index.`);
-                } else console.log(`   -> Edit was AFTER chunk. No index change.`);
-                chunk.correctedText = currentValue.slice(chunk.startIndex, chunk.endIndex);
-                console.log(`   After - Start: ${chunk.startIndex}, End: ${chunk.endIndex}, Corrected Text: "${chunk.correctedText}"`);
+                console.log(`Processing chunk: "${chunk.transcript}", Before - Start: ${derivedStartIndex}, End: ${chunk.endIndex}`);
+                if (editStartIndex <= chunk.endIndex) chunk.endIndex += lengthChange;
+                chunk.correctedText = currentValue.slice(derivedStartIndex, chunk.endIndex);
+                console.log(`   After - Start: ${derivedStartIndex}, End: ${chunk.endIndex}, Corrected Text: "${chunk.correctedText}"`);
+                derivedStartIndex = chunk.endIndex;
             });
             lastTextValue = currentValue;
             console.log("--- Input event finished ---", voiceLogs);
