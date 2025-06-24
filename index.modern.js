@@ -190,6 +190,8 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             }
         };
         onChangeText(newValue);
+        console.log("value", value);
+        console.log("new value", newValue);
         onChange && onChange(e);
         reset();
         return inputRef.current?.focus();
