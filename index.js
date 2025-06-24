@@ -217,7 +217,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             log.correctedText = currentValue.slice(log.start, log.end);
         });
         voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
-        console.log("Text corrected, logs updated:", voiceLogs);
+        if (typeof window !== "undefined") localStorage.setItem("voiceLogs", voiceLogs);
         lastTextValue = currentValue;
         onChange && onChange(e);
         reset();
@@ -441,6 +441,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         wrapper.appendChild(micBtn);
         let mediaRecorder, audioChunks = [], isRecording = false;
         voiceLogs = [];
+        if (typeof window !== "undefined") localStorage.setItem("voiceLogs", voiceLogs);
         lastTextValue = target.value;
         const showLoader = ()=>{
             micBtn.innerHTML = "";
@@ -498,7 +499,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     };
                     voiceLogs.push(newLog);
                     voiceLogs.sort((a, b)=>a.start - b.start);
-                    console.log("New transcript added and logs sorted:", voiceLogs);
+                    if (typeof window !== "undefined") localStorage.setItem("voiceLogs", voiceLogs);
                     lastTextValue = target.value;
                     restoreMicIcon();
                 };
@@ -522,7 +523,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 log.correctedText = currentValue.slice(log.start, log.end);
             });
             voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
-            console.log("Text corrected, logs updated:", voiceLogs);
+            if (typeof window !== "undefined") localStorage.setItem("voiceLogs", voiceLogs);
             lastTextValue = currentValue;
         });
         setInterval(()=>{
