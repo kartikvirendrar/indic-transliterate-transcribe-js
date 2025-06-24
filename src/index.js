@@ -141,7 +141,7 @@ export const IndicTransliterate = ({
       if (changeStart > log.start && changeStart <= log.end) {
         log.end += lengthDelta;
       }
-      log.correctedText = currentValue.slice(log.start, log.end);
+      log.correctedTranscription = currentValue.slice(log.start, log.end);
     });
     voiceLogs = voiceLogs.filter(log => log.start < log.end);
     if (typeof window !== "undefined") {
@@ -503,8 +503,8 @@ export const IndicTransliterate = ({
           const newLog = {
             id: Date.now(),
             audioBase64: base64Audio,
-            initialTranscript: transcript,
-            correctedText: transcript,
+            machineTranscription: transcript,
+            correctedTranscription: transcript,
             start: cursorPos,
             end: cursorPos + transcriptLength
           };
@@ -551,7 +551,7 @@ export const IndicTransliterate = ({
           log.end += lengthDelta;
         }
 
-        log.correctedText = currentValue.slice(log.start, log.end);
+        log.correctedTranscription = currentValue.slice(log.start, log.end);
       });
 
       voiceLogs = voiceLogs.filter(log => log.start < log.end);
