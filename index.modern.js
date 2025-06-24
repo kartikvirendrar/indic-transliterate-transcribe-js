@@ -204,7 +204,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             log.correctedText = currentValue.slice(log.start, log.end);
         });
         voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
-        if (typeof window !== "undefined") localStorage.setItem("voiceLogs", voiceLogs);
+        if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
         lastTextValue = currentValue;
         onChange && onChange(e);
         reset();
@@ -428,7 +428,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         wrapper.appendChild(micBtn);
         let mediaRecorder, audioChunks = [], isRecording = false;
         voiceLogs = [];
-        if (typeof window !== "undefined") localStorage.setItem("voiceLogs", voiceLogs);
+        if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
         lastTextValue = target.value;
         const showLoader = ()=>{
             micBtn.innerHTML = "";
@@ -486,7 +486,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     };
                     voiceLogs.push(newLog);
                     voiceLogs.sort((a, b)=>a.start - b.start);
-                    if (typeof window !== "undefined") localStorage.setItem("voiceLogs", voiceLogs);
+                    if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
                     lastTextValue = target.value;
                     restoreMicIcon();
                 };
@@ -510,25 +510,9 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 log.correctedText = currentValue.slice(log.start, log.end);
             });
             voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
-            if (typeof window !== "undefined") localStorage.setItem("voiceLogs", voiceLogs);
+            if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
             lastTextValue = currentValue;
         });
-        setInterval(()=>{
-            if (voiceLogs.length > 0) {
-                const logsToSend = voiceLogs.map((log)=>({
-                        voice_input_base64_string: log.audioBase64,
-                        output_from_api: log.initialTranscript,
-                        final_corrected_text: log.correctedText
-                    }));
-                fetch("https://dmoapi.com/save-logs", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(logsToSend)
-                });
-            }
-        }, 60000);
         if (!document.getElementById("voice-typing-spinner-style")) {
             const style = document.createElement("style");
             style.id = "voice-typing-spinner-style";
