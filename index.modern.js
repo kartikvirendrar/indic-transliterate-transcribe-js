@@ -159,7 +159,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         setOptions([]);
     };
     let lastTextValue = "";
-    let voiceLogs = [];
+    const [voiceLogs, setVoiceLogs] = (0, $WrkLT$useState)([]);
     const handleSelection = (index)=>{
         const currentString = value;
         // create a new string with the currently typed word
@@ -200,16 +200,26 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         let changeStart = 0;
         while(changeStart < lastTextValue.length && changeStart < currentValue.length && lastTextValue[changeStart] === currentValue[changeStart])changeStart++;
         const lengthDelta = currentValue.length - lastTextValue.length;
-        voiceLogs.forEach((log)=>{
-            if (changeStart > log.end) return;
-            if (changeStart <= log.start) {
-                log.start += lengthDelta;
-                log.end += lengthDelta;
-            }
-            if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
-            log.correctedText = currentValue.slice(log.start, log.end);
+        setVoiceLogs((prevLogs)=>{
+            const updatedLogs = prevLogs.map((log)=>{
+                let newStart = log.start;
+                let newEnd = log.end;
+                if (changeStart > log.end) ;
+                else if (changeStart <= log.start) {
+                    newStart += lengthDelta;
+                    newEnd += lengthDelta;
+                } else if (changeStart > log.start && changeStart <= log.end) newEnd += lengthDelta;
+                return {
+                    ...log,
+                    start: newStart,
+                    end: newEnd,
+                    correctedText: currentValue.slice(newStart, newEnd)
+                };
+            });
+            const filteredLogs = updatedLogs.filter((log)=>log.start < log.end);
+            console.log("Text corrected, logs updated:", filteredLogs);
+            return filteredLogs;
         });
-        console.log("Text corrected, logs updated:", voiceLogs);
         lastTextValue = currentValue;
         reset();
         return inputRef.current?.focus();
@@ -470,23 +480,31 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     const transcriptLength = transcript.length;
                     target.value = currentText.slice(0, cursorPos) + transcript + currentText.slice(cursorPos);
                     onChangeText(target.value);
-                    voiceLogs.forEach((log)=>{
-                        if (log.start >= cursorPos) {
-                            log.start += transcriptLength;
-                            log.end += transcriptLength;
-                        }
+                    setVoiceLogs((prevLogs)=>{
+                        const updatedOldLogs = prevLogs.map((log)=>{
+                            if (log.start >= cursorPos) return {
+                                ...log,
+                                start: log.start + transcriptLength,
+                                end: log.end + transcriptLength
+                            };
+                            return log;
+                        });
+                        const newLog = {
+                            id: Date.now(),
+                            audioBase64: base64Audio,
+                            initialTranscript: transcript,
+                            correctedText: transcript,
+                            start: cursorPos,
+                            end: cursorPos + transcriptLength
+                        };
+                        const newLogs = [
+                            ...updatedOldLogs,
+                            newLog
+                        ];
+                        newLogs.sort((a, b)=>a.start - b.start);
+                        console.log("New transcript added and logs sorted:", newLogs);
+                        return newLogs;
                     });
-                    const newLog = {
-                        id: Date.now(),
-                        audioBase64: base64Audio,
-                        initialTranscript: transcript,
-                        correctedText: transcript,
-                        start: cursorPos,
-                        end: cursorPos + transcriptLength
-                    };
-                    voiceLogs.push(newLog);
-                    voiceLogs.sort((a, b)=>a.start - b.start);
-                    console.log("New transcript added and logs sorted:", voiceLogs);
                     lastTextValue = target.value;
                     restoreMicIcon();
                 };
@@ -500,17 +518,26 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             let changeStart = 0;
             while(changeStart < lastTextValue.length && changeStart < currentValue.length && lastTextValue[changeStart] === currentValue[changeStart])changeStart++;
             const lengthDelta = currentValue.length - lastTextValue.length;
-            voiceLogs.forEach((log)=>{
-                if (changeStart > log.end) return;
-                if (changeStart <= log.start) {
-                    log.start += lengthDelta;
-                    log.end += lengthDelta;
-                }
-                if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
-                log.correctedText = currentValue.slice(log.start, log.end);
+            setVoiceLogs((prevLogs)=>{
+                const updatedLogs = prevLogs.map((log)=>{
+                    let newStart = log.start;
+                    let newEnd = log.end;
+                    if (changeStart > log.end) ;
+                    else if (changeStart <= log.start) {
+                        newStart += lengthDelta;
+                        newEnd += lengthDelta;
+                    } else if (changeStart > log.start && changeStart <= log.end) newEnd += lengthDelta;
+                    return {
+                        ...log,
+                        start: newStart,
+                        end: newEnd,
+                        correctedText: currentValue.slice(newStart, newEnd)
+                    };
+                });
+                const filteredLogs = updatedLogs.filter((log)=>log.start < log.end);
+                console.log("Text corrected, logs updated:", filteredLogs);
+                return filteredLogs;
             });
-            voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
-            console.log("Text corrected, logs updated:", voiceLogs);
             lastTextValue = currentValue;
         });
         setInterval(()=>{
