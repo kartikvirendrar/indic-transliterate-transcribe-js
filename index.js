@@ -206,21 +206,23 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         onChangeText(newValue);
         onChange && onChange(e);
-        const currentValue = newValue;
-        let changeStart = 0;
-        while(changeStart < lastTextValue.current.length && changeStart < currentValue.length && lastTextValue.current[changeStart] === currentValue[changeStart])changeStart++;
-        const lengthDelta = currentValue.length - lastTextValue.current.length;
-        voiceLogs.current.forEach((log)=>{
-            if (changeStart > log.end) return;
-            if (changeStart <= log.start) {
-                log.start += lengthDelta;
-                log.end += lengthDelta;
-            }
-            if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
-            log.correctedText = currentValue.slice(log.start, log.end);
-        });
-        if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
-        lastTextValue.current = currentValue;
+        if (lastTextValue.current != null & voiceLogs.current == []) {
+            const currentValue = newValue;
+            let changeStart = 0;
+            while(changeStart < lastTextValue.current.length && changeStart < currentValue.length && lastTextValue.current[changeStart] === currentValue[changeStart])changeStart++;
+            const lengthDelta = currentValue.length - lastTextValue.current.length;
+            voiceLogs.current.forEach((log)=>{
+                if (changeStart > log.end) return;
+                if (changeStart <= log.start) {
+                    log.start += lengthDelta;
+                    log.end += lengthDelta;
+                }
+                if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
+                log.correctedText = currentValue.slice(log.start, log.end);
+            });
+            if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
+            lastTextValue.current = currentValue;
+        }
         reset();
         return inputRef.current?.focus();
     };
@@ -368,10 +370,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         } else onKeyDown && onKeyDown(event);
     };
     const handleBlur = (event)=>{
-        if (!(0, $0ecfe4a0401ba76b$export$e27e3030245d4c9b)()) {
-            if (insertCurrentSelectionOnBlur && options[selection]) handleSelection(selection);
-            else reset();
-        }
+        reset();
         onBlur && onBlur(event);
     };
     const handleResize = ()=>{
@@ -603,6 +602,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 ...rest
             }),
             shouldRenderSuggestions && options.length > 0 && /*#__PURE__*/ (0, $jECdM$reactjsxruntime.jsx)("ul", {
+                onMouseDown: (e)=>e.preventDefault(),
                 style: {
                     backgroundClip: "padding-box",
                     backgroundColor: "#fff",
