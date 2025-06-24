@@ -87,6 +87,7 @@ export const IndicTransliterate = ({
 
   let lastTextValue = "";
   let voiceLogs = [];
+  const [testGlo, setTestGlo] = useState(false);
 
   const handleSelection = index => {
     const currentString = value
@@ -122,6 +123,7 @@ export const IndicTransliterate = ({
       target: { value: newValue }
     }
     console.log("Text before change text, logs updated:", voiceLogs);
+    console.log("Text before change text, logs updated:", testGlo);
     onChangeText(newValue)
     onChange && onChange(e)
 
@@ -152,8 +154,12 @@ export const IndicTransliterate = ({
     });
     console.log("Text corrected, logs updated:", voiceLogs);
     lastTextValue = currentValue;
+    console.log("input ref2", inputRef.current.value);
 
     reset()
+    console.log("input ref3", inputRef.current.value);
+    inputRef.current?.focus()
+    console.log("input ref4", inputRef.current.value);
     return inputRef.current?.focus()
   }
 
@@ -521,7 +527,7 @@ export const IndicTransliterate = ({
 
     target.addEventListener("input", () => {
       const currentValue = target.value;
-
+      setTestGlo(true);
       let changeStart = 0;
       while (
         changeStart < lastTextValue.length &&
