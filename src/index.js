@@ -119,6 +119,7 @@ export const IndicTransliterate = ({
       target: { value: newValue }
     }
     onChangeText(newValue)
+    onChange && onChange(e)
 
     const currentValue = inputRef.current.value;
     let changeStart = 0;
@@ -147,7 +148,6 @@ export const IndicTransliterate = ({
     console.log("Text corrected, logs updated:", voiceLogs);
     lastTextValue = currentValue;
 
-    onChange && onChange(e)
     reset()
     return inputRef.current?.focus()
   }
