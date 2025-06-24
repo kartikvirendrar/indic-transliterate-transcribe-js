@@ -563,21 +563,6 @@ export const IndicTransliterate = ({
       lastTextValue = currentValue;
     });
 
-    setInterval(() => {
-      if (voiceLogs.length > 0) {
-        const logsToSend = voiceLogs.map(log => ({
-          voice_input_base64_string: log.audioBase64,
-          output_from_api: log.initialTranscript,
-          final_corrected_text: log.correctedText
-        }));
-        fetch("https://dmoapi.com/save-logs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(logsToSend)
-        });
-      }
-    }, 60000);
-
     if (!document.getElementById("voice-typing-spinner-style")) {
       const style = document.createElement("style");
       style.id = "voice-typing-spinner-style";
