@@ -85,6 +85,9 @@ export const IndicTransliterate = ({
     setOptions([])
   }
 
+  let lastTextValue = "";
+  let voiceLogs = [];
+
   const handleSelection = index => {
     const currentString = value
     // create a new string with the currently typed word
@@ -120,6 +123,7 @@ export const IndicTransliterate = ({
     }
     console.log("Text before change text, logs updated:", voiceLogs);
     onChangeText(newValue)
+    onChange && onChange(e)
 
     console.log("Text before corrected, logs updated:", voiceLogs);
     console.log("input ref", inputRef.current.value);
@@ -149,7 +153,6 @@ export const IndicTransliterate = ({
     console.log("Text corrected, logs updated:", voiceLogs);
     lastTextValue = currentValue;
 
-    onChange && onChange(e)
     reset()
     return inputRef.current?.focus()
   }
@@ -409,9 +412,6 @@ export const IndicTransliterate = ({
     })
   }, [lang])
 
-  let lastTextValue = "";
-  let voiceLogs = [];
-
   const enableVoiceTyping = () => {
     const target = inputRef.current
     if (!target) return
@@ -440,7 +440,6 @@ export const IndicTransliterate = ({
     wrapper.appendChild(micBtn);
 
     let mediaRecorder, audioChunks = [], isRecording = false;
-    voiceLogs = [];
     lastTextValue = target.value;
 
     const showLoader = () => {
