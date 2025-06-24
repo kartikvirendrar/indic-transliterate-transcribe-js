@@ -119,6 +119,8 @@ export const IndicTransliterate = ({
       target: { value: newValue }
     }
     onChangeText(newValue)
+    console.log("value",value);
+    console.log("new value",newValue);
     onChange && onChange(e)
     reset()
     return inputRef.current?.focus()
