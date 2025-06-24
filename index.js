@@ -202,8 +202,10 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 value: newValue
             }
         };
+        console.log("Text before change text, logs updated:", voiceLogs);
         onChangeText(newValue);
-        onChange && onChange(e);
+        console.log("Text before corrected, logs updated:", voiceLogs);
+        console.log("input ref", inputRef.current.value);
         const currentValue = inputRef.current.value;
         let changeStart = 0;
         while(changeStart < lastTextValue.length && changeStart < currentValue.length && lastTextValue[changeStart] === currentValue[changeStart])changeStart++;
@@ -217,9 +219,9 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
             log.correctedText = currentValue.slice(log.start, log.end);
         });
-        voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
         console.log("Text corrected, logs updated:", voiceLogs);
         lastTextValue = currentValue;
+        onChange && onChange(e);
         reset();
         return inputRef.current?.focus();
     };
@@ -298,22 +300,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         // bubble up event to the parent component
         onChange && onChange(e);
         onChangeText(value);
-        const currentValue = inputRef.current.value;
-        let changeStart = 0;
-        while(changeStart < lastTextValue.length && changeStart < currentValue.length && lastTextValue[changeStart] === currentValue[changeStart])changeStart++;
-        const lengthDelta = currentValue.length - lastTextValue.length;
-        voiceLogs.forEach((log)=>{
-            if (changeStart > log.end) return;
-            if (changeStart <= log.start) {
-                log.start += lengthDelta;
-                log.end += lengthDelta;
-            }
-            if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
-            log.correctedText = currentValue.slice(log.start, log.end);
-        });
-        voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
-        console.log("Text corrected, logs updated:", voiceLogs);
-        lastTextValue = currentValue;
         if (!shouldRenderSuggestions) return;
         // get the current index of the cursor
         const caret = (0, $9f468a725b3358f7$export$8a4ff65f970d59a5)(e.target).end;
