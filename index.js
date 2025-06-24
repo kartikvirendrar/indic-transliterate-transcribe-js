@@ -214,7 +214,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 log.end += lengthDelta;
             }
             if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
-            log.correctedText = currentValue.slice(log.start, log.end);
+            log.correctedTranscription = currentValue.slice(log.start, log.end);
         });
         voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
         if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
@@ -492,8 +492,8 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     const newLog = {
                         id: Date.now(),
                         audioBase64: base64Audio,
-                        initialTranscript: transcript,
-                        correctedText: transcript,
+                        machineTranscription: transcript,
+                        correctedTranscription: transcript,
                         start: cursorPos,
                         end: cursorPos + transcriptLength
                     };
@@ -520,7 +520,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     log.end += lengthDelta;
                 }
                 if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
-                log.correctedText = currentValue.slice(log.start, log.end);
+                log.correctedTranscription = currentValue.slice(log.start, log.end);
             });
             voiceLogs = voiceLogs.filter((log)=>log.start < log.end);
             if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
