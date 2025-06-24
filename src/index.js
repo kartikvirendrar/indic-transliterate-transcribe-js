@@ -144,7 +144,9 @@ export const IndicTransliterate = ({
       log.correctedText = currentValue.slice(log.start, log.end);
     });
     voiceLogs = voiceLogs.filter(log => log.start < log.end);
-    console.log("Text corrected, logs updated:", voiceLogs);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("voiceLogs", voiceLogs);
+    }
     lastTextValue = currentValue;
 
     onChange && onChange(e)
@@ -439,6 +441,9 @@ export const IndicTransliterate = ({
 
     let mediaRecorder, audioChunks = [], isRecording = false;
     voiceLogs = [];
+    if (typeof window !== "undefined") {
+      localStorage.setItem("voiceLogs", voiceLogs);
+    }
     lastTextValue = target.value;
 
     const showLoader = () => {
@@ -506,7 +511,9 @@ export const IndicTransliterate = ({
           voiceLogs.push(newLog);
           voiceLogs.sort((a, b) => a.start - b.start);
 
-          console.log("New transcript added and logs sorted:", voiceLogs);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("voiceLogs", voiceLogs);
+          }
 
           lastTextValue = target.value;
           restoreMicIcon();
@@ -549,7 +556,9 @@ export const IndicTransliterate = ({
 
       voiceLogs = voiceLogs.filter(log => log.start < log.end);
 
-      console.log("Text corrected, logs updated:", voiceLogs);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("voiceLogs", voiceLogs);
+      }
 
       lastTextValue = currentValue;
     });
