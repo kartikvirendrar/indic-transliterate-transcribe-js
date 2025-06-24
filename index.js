@@ -173,6 +173,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
     };
     let lastTextValue = "";
     let voiceLogs = [];
+    const [testGlo, setTestGlo] = (0, $jECdM$react.useState)(false);
     const handleSelection = (index)=>{
         const currentString = value;
         // create a new string with the currently typed word
@@ -205,6 +206,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             }
         };
         console.log("Text before change text, logs updated:", voiceLogs);
+        console.log("Text before change text, logs updated:", testGlo);
         onChangeText(newValue);
         onChange && onChange(e);
         console.log("Text before corrected, logs updated:", voiceLogs);
@@ -224,7 +226,11 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         });
         console.log("Text corrected, logs updated:", voiceLogs);
         lastTextValue = currentValue;
+        console.log("input ref2", inputRef.current.value);
         reset();
+        console.log("input ref3", inputRef.current.value);
+        inputRef.current?.focus();
+        console.log("input ref4", inputRef.current.value);
         return inputRef.current?.focus();
     };
     const renderSuggestions = async (lastWord, wholeText)=>{
@@ -510,6 +516,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         target.addEventListener("input", ()=>{
             const currentValue = target.value;
+            setTestGlo(true);
             let changeStart = 0;
             while(changeStart < lastTextValue.length && changeStart < currentValue.length && lastTextValue[changeStart] === currentValue[changeStart])changeStart++;
             const lengthDelta = currentValue.length - lastTextValue.length;
