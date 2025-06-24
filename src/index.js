@@ -145,7 +145,7 @@ export const IndicTransliterate = ({
     });
     voiceLogs = voiceLogs.filter(log => log.start < log.end);
     if (typeof window !== "undefined") {
-      localStorage.setItem("voiceLogs", voiceLogs);
+      localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
     }
     lastTextValue = currentValue;
 
@@ -442,7 +442,7 @@ export const IndicTransliterate = ({
     let mediaRecorder, audioChunks = [], isRecording = false;
     voiceLogs = [];
     if (typeof window !== "undefined") {
-      localStorage.setItem("voiceLogs", voiceLogs);
+      localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
     }
     lastTextValue = target.value;
 
@@ -512,7 +512,7 @@ export const IndicTransliterate = ({
           voiceLogs.sort((a, b) => a.start - b.start);
 
           if (typeof window !== "undefined") {
-            localStorage.setItem("voiceLogs", voiceLogs);
+            localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
           }
 
           lastTextValue = target.value;
@@ -557,7 +557,7 @@ export const IndicTransliterate = ({
       voiceLogs = voiceLogs.filter(log => log.start < log.end);
 
       if (typeof window !== "undefined") {
-        localStorage.setItem("voiceLogs", voiceLogs);
+        localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs));
       }
 
       lastTextValue = currentValue;
