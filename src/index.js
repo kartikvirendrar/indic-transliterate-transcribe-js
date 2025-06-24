@@ -124,34 +124,35 @@ export const IndicTransliterate = ({
     onChangeText(newValue)
     onChange && onChange(e)
 
-    const currentValue = newValue;
-    let changeStart = 0;
-    while (
-      changeStart < lastTextValue.current.length &&
-      changeStart < currentValue.length &&
-      lastTextValue.current[changeStart] === currentValue[changeStart]
-    ) {
-      changeStart++;
+    if (lastTextValue.current != null & voiceLogs.current == []) {
+      const currentValue = newValue;
+      let changeStart = 0;
+      while (
+        changeStart < lastTextValue.current.length &&
+        changeStart < currentValue.length &&
+        lastTextValue.current[changeStart] === currentValue[changeStart]
+      ) {
+        changeStart++;
+      }
+      const lengthDelta = currentValue.length - lastTextValue.current.length;
+      voiceLogs.current.forEach(log => {
+        if (changeStart > log.end) {
+          return;
+        }
+        if (changeStart <= log.start) {
+          log.start += lengthDelta;
+          log.end += lengthDelta;
+        }
+        if (changeStart > log.start && changeStart <= log.end) {
+          log.end += lengthDelta;
+        }
+        log.correctedText = currentValue.slice(log.start, log.end);
+      });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
+      }
+      lastTextValue.current = currentValue;
     }
-    const lengthDelta = currentValue.length - lastTextValue.current.length;
-    voiceLogs.current.forEach(log => {
-      if (changeStart > log.end) {
-        return;
-      }
-      if (changeStart <= log.start) {
-        log.start += lengthDelta;
-        log.end += lengthDelta;
-      }
-      if (changeStart > log.start && changeStart <= log.end) {
-        log.end += lengthDelta;
-      }
-      log.correctedText = currentValue.slice(log.start, log.end);
-    });
-    if (typeof window !== "undefined") {
-      localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
-    }
-    lastTextValue.current = currentValue;
-
     reset()
     return inputRef.current?.focus()
   }
@@ -363,13 +364,7 @@ export const IndicTransliterate = ({
   }
 
   const handleBlur = event => {
-    if (!isTouchEnabled()) {
-      if (insertCurrentSelectionOnBlur && options[selection]) {
-        handleSelection(selection)
-      } else {
-        reset()
-      }
-    }
+    reset()
     onBlur && onBlur(event)
   }
 
@@ -550,7 +545,7 @@ export const IndicTransliterate = ({
       });
 
       voiceLogs.current = voiceLogs.current.filter(log => log.start < log.end);
-      
+
       if (typeof window !== "undefined") {
         localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
       }
@@ -638,6 +633,7 @@ export const IndicTransliterate = ({
       })}
       {shouldRenderSuggestions && options.length > 0 && (
         <ul
+          onMouseDown={e => e.preventDefault()}
           style={{
             backgroundClip: "padding-box",
             backgroundColor: "#fff",
