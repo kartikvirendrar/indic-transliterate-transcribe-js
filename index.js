@@ -171,6 +171,8 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         setSelection(0);
         setOptions([]);
     };
+    let lastTextValue = "";
+    let voiceLogs = [];
     const handleSelection = (index)=>{
         const currentString = value;
         // create a new string with the currently typed word
@@ -204,6 +206,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         console.log("Text before change text, logs updated:", voiceLogs);
         onChangeText(newValue);
+        onChange && onChange(e);
         console.log("Text before corrected, logs updated:", voiceLogs);
         console.log("input ref", inputRef.current.value);
         const currentValue = inputRef.current.value;
@@ -221,7 +224,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         });
         console.log("Text corrected, logs updated:", voiceLogs);
         lastTextValue = currentValue;
-        onChange && onChange(e);
         reset();
         return inputRef.current?.focus();
     };
@@ -415,8 +417,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
     }, [
         lang
     ]);
-    let lastTextValue = "";
-    let voiceLogs = [];
     const enableVoiceTyping = ()=>{
         const target = inputRef.current;
         if (!target) return;
@@ -442,7 +442,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         wrapper.appendChild(target);
         wrapper.appendChild(micBtn);
         let mediaRecorder, audioChunks = [], isRecording = false;
-        voiceLogs = [];
         lastTextValue = target.value;
         const showLoader = ()=>{
             micBtn.innerHTML = "";
