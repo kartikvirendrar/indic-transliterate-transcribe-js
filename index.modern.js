@@ -46,6 +46,28 @@ const $871e300faf449d5f$export$24b0ea3375909d37 = {
 };
 
 
+const $cb083382c5991590$var$MAX_CACHE_SIZE = 10000;
+const $cb083382c5991590$var$SAVE_THRESHOLD = 20;
+const $cb083382c5991590$var$CACHE_KEY = "transliterationCache";
+const $cb083382c5991590$var$cache = $cb083382c5991590$var$loadCacheFromLocalStorage();
+let $cb083382c5991590$var$newEntriesCount = 0;
+function $cb083382c5991590$var$loadCacheFromLocalStorage() {
+    const cachedData = "";
+    if (typeof window !== "undefined") cachedData = localStorage.getItem($cb083382c5991590$var$CACHE_KEY);
+    return cachedData ? JSON.parse(cachedData) : {};
+}
+function $cb083382c5991590$var$saveCacheToLocalStorage() {
+    if (typeof window !== "undefined") localStorage.setItem($cb083382c5991590$var$CACHE_KEY, JSON.stringify($cb083382c5991590$var$cache));
+}
+const $cb083382c5991590$var$getWordWithLowestFrequency = (dictionary)=>{
+    let lowestFreqWord = null;
+    let lowestFreq = Infinity;
+    for(const word in dictionary)if (dictionary[word].frequency < lowestFreq) {
+        lowestFreq = dictionary[word].frequency;
+        lowestFreqWord = word;
+    }
+    return lowestFreqWord;
+};
 const $cb083382c5991590$export$27f30d10c00bcc6c = async (word, customApiURL, apiKey, config)=>{
     const { showCurrentWordAsLastSuggestion: // numOptions = 5,
     showCurrentWordAsLastSuggestion = true, lang: lang = "hi" } = config || {};
@@ -53,6 +75,11 @@ const $cb083382c5991590$export$27f30d10c00bcc6c = async (word, customApiURL, api
     // const url = `https://www.google.com/inputtools/request?ime=transliteration_en_${lang}&num=5&cp=0&cs=0&ie=utf-8&oe=utf-8&app=jsapi&text=${word}`;
     // let myHeaders = new Headers();
     // myHeaders.append("Content-Type", "application/json");
+    if (!$cb083382c5991590$var$cache[lang]) $cb083382c5991590$var$cache[lang] = {};
+    if ($cb083382c5991590$var$cache[lang][word.toLowerCase()]) {
+        $cb083382c5991590$var$cache[lang][word.toLowerCase()].frequency += 1;
+        return $cb083382c5991590$var$cache[lang][word.toLowerCase()].suggestions;
+    }
     const requestOptions = {
         method: "GET",
         headers: {
@@ -69,6 +96,19 @@ const $cb083382c5991590$export$27f30d10c00bcc6c = async (word, customApiURL, api
                 ...data.result,
                 word
             ] : data.result;
+            if (Object.keys($cb083382c5991590$var$cache[lang]).length >= $cb083382c5991590$var$MAX_CACHE_SIZE) {
+                const lowestFreqWord = $cb083382c5991590$var$getWordWithLowestFrequency($cb083382c5991590$var$cache[lang]);
+                if (lowestFreqWord) delete $cb083382c5991590$var$cache[lang][lowestFreqWord];
+            }
+            $cb083382c5991590$var$cache[lang][word.toLowerCase()] = {
+                suggestions: found,
+                frequency: 1
+            };
+            $cb083382c5991590$var$newEntriesCount += 1;
+            if ($cb083382c5991590$var$newEntriesCount >= $cb083382c5991590$var$SAVE_THRESHOLD) {
+                $cb083382c5991590$var$saveCacheToLocalStorage();
+                $cb083382c5991590$var$newEntriesCount = 0;
+            }
             return found;
         } else {
             if (showCurrentWordAsLastSuggestion) {
@@ -85,6 +125,7 @@ const $cb083382c5991590$export$27f30d10c00bcc6c = async (word, customApiURL, api
         return [];
     }
 };
+window.addEventListener("beforeunload", $cb083382c5991590$var$saveCacheToLocalStorage);
 
 
 const $380c1a0df2fde1d3$export$ca6dda5263526f75 = "https://xlit-api.ai4bharat.org/";
@@ -263,7 +304,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 uuid: uuid,
                 parent_uuid: parentUuid,
                 word: value,
-                source: "anudesh",
+                source: typeof window !== "undefined" ? localStorage.getItem("source") != undefined ? localStorage.getItem("source") : "node-module" : "node-module",
                 language: lang,
                 steps: logJsonArray
             };
