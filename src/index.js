@@ -495,7 +495,7 @@ export const IndicTransliterate = ({
           });
 
           const newLog = {
-            id: Date.now(),
+            id: new Date().toISOString(),
             audioBase64: base64Audio,
             initialTranscript: transcript,
             correctedText: transcript,
