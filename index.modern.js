@@ -515,7 +515,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                         }
                     });
                     const newLog = {
-                        id: Date.now(),
+                        id: new Date().toISOString(),
                         audioBase64: base64Audio,
                         initialTranscript: transcript,
                         correctedText: transcript,
