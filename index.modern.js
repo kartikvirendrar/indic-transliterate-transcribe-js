@@ -52,7 +52,7 @@ const $cb083382c5991590$var$CACHE_KEY = "transliterationCache";
 const $cb083382c5991590$var$cache = $cb083382c5991590$var$loadCacheFromLocalStorage();
 let $cb083382c5991590$var$newEntriesCount = 0;
 function $cb083382c5991590$var$loadCacheFromLocalStorage() {
-    const cachedData = "";
+    let cachedData = "";
     if (typeof window !== "undefined") cachedData = localStorage.getItem($cb083382c5991590$var$CACHE_KEY);
     return cachedData ? JSON.parse(cachedData) : {};
 }

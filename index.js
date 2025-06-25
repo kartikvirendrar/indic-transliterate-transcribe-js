@@ -65,7 +65,7 @@ const $857753f052b25831$var$CACHE_KEY = "transliterationCache";
 const $857753f052b25831$var$cache = $857753f052b25831$var$loadCacheFromLocalStorage();
 let $857753f052b25831$var$newEntriesCount = 0;
 function $857753f052b25831$var$loadCacheFromLocalStorage() {
-    const cachedData = "";
+    let cachedData = "";
     if (typeof window !== "undefined") cachedData = localStorage.getItem($857753f052b25831$var$CACHE_KEY);
     return cachedData ? JSON.parse(cachedData) : {};
 }
