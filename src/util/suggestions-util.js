@@ -6,7 +6,7 @@ const cache = loadCacheFromLocalStorage()
 let newEntriesCount = 0
 
 function loadCacheFromLocalStorage() {
-  const cachedData = ""
+  let cachedData = ""
   if (typeof window !== "undefined") {
     cachedData = localStorage.getItem(CACHE_KEY)
   }
