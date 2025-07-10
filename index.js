@@ -212,8 +212,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         setSelection(0);
         setOptions([]);
     };
-    const lastTextValue = (0, $jECdM$react.useRef)(null);
-    const voiceLogs = (0, $jECdM$react.useRef)([]);
     const handleSelection = (index)=>{
         const currentString = value;
         // create a new string with the currently typed word
@@ -247,23 +245,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         };
         onChangeText(newValue);
         onChange && onChange(e);
-        if (lastTextValue.current != null & voiceLogs.current == []) {
-            const currentValue = newValue;
-            let changeStart = 0;
-            while(changeStart < lastTextValue.current.length && changeStart < currentValue.length && lastTextValue.current[changeStart] === currentValue[changeStart])changeStart++;
-            const lengthDelta = currentValue.length - lastTextValue.current.length;
-            voiceLogs.current.forEach((log)=>{
-                if (changeStart > log.end) return;
-                if (changeStart <= log.start) {
-                    log.start += lengthDelta;
-                    log.end += lengthDelta;
-                }
-                if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
-                log.correctedText = currentValue.slice(log.start, log.end);
-            });
-            if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
-            lastTextValue.current = currentValue;
-        }
         reset();
         return inputRef.current?.focus();
     };
@@ -479,8 +460,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         wrapper.appendChild(target);
         wrapper.appendChild(micBtn);
         let mediaRecorder, audioChunks = [], isRecording = false;
-        lastTextValue.current = target.value;
-        voiceLogs.current = [];
         const showLoader = ()=>{
             micBtn.innerHTML = "";
             const spinner = document.createElement("div");
@@ -518,27 +497,8 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                     const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
                     const cursorPos = target.selectionStart;
                     const currentText = target.value;
-                    const transcriptLength = transcript.length;
                     target.value = currentText.slice(0, cursorPos) + transcript + currentText.slice(cursorPos);
                     onChangeText(target.value);
-                    voiceLogs.current.forEach((log)=>{
-                        if (log.start >= cursorPos) {
-                            log.start += transcriptLength;
-                            log.end += transcriptLength;
-                        }
-                    });
-                    const newLog = {
-                        id: new Date().toISOString(),
-                        audioBase64: base64Audio,
-                        initialTranscript: transcript,
-                        correctedText: transcript,
-                        start: cursorPos,
-                        end: cursorPos + transcriptLength
-                    };
-                    voiceLogs.current.push(newLog);
-                    voiceLogs.current.sort((a, b)=>a.start - b.start);
-                    if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
-                    lastTextValue.current = target.value;
                     restoreMicIcon();
                 };
                 mediaRecorder.start();
@@ -546,24 +506,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 restoreStopIcon();
             }
         };
-        target.addEventListener("input", ()=>{
-            const currentValue = target.value;
-            let changeStart = 0;
-            while(changeStart < lastTextValue.current.length && changeStart < currentValue.length && lastTextValue.current[changeStart] === currentValue[changeStart])changeStart++;
-            const lengthDelta = currentValue.length - lastTextValue.current.length;
-            voiceLogs.current.forEach((log)=>{
-                if (changeStart > log.end) return;
-                if (changeStart <= log.start) {
-                    log.start += lengthDelta;
-                    log.end += lengthDelta;
-                }
-                if (changeStart > log.start && changeStart <= log.end) log.end += lengthDelta;
-                log.correctedText = currentValue.slice(log.start, log.end);
-            });
-            voiceLogs.current = voiceLogs.current.filter((log)=>log.start < log.end);
-            if (typeof window !== "undefined") localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
-            lastTextValue.current = currentValue;
-        });
         if (!document.getElementById("voice-typing-spinner-style")) {
             const style = document.createElement("style");
             style.id = "voice-typing-spinner-style";
