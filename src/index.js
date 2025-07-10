@@ -4,7 +4,7 @@ import { setCaretPosition, getInputSelection, isTouchEnabled } from "./util"
 import getCaretCoordinates from "textarea-caret"
 import { TriggerKeys } from "./constants/TriggerKeys"
 import { getTransliterateSuggestions } from "./util/suggestions-util"
-import { getTransliterationLanguages } from "./util/getTransliterationLanguages"
+// import { getTransliterationLanguages } from "./util/getTransliterationLanguages"
 import { BASE_URL_TL } from "./constants/Urls"
 
 const KEY_UP = "ArrowUp"
@@ -195,15 +195,15 @@ export const IndicTransliterate = ({
     }
   }
 
-  const getDirectionAndFont = async lang => {
-    const langList = await getTransliterationLanguages()
-    const langObj = langList?.find(l => l.LangCode === lang)
-    return [
-      langObj?.Direction ?? "ltr",
-      langObj?.GoogleFont,
-      langObj?.FallbackFont
-    ]
-  }
+  // const getDirectionAndFont = async lang => {
+  //   const langList = await getTransliterationLanguages()
+  //   const langObj = langList?.find(l => l.LangCode === lang)
+  //   return [
+  //     langObj?.Direction ?? "ltr",
+  //     langObj?.GoogleFont,
+  //     langObj?.FallbackFont
+  //   ]
+  // }
 
   const handleChange = e => {
     const value = e.currentTarget.value
@@ -390,24 +390,24 @@ export const IndicTransliterate = ({
     }
   }, [])
 
-  useEffect(() => {
-    getDirectionAndFont(lang).then(([direction, googleFont, fallbackFont]) => {
-      setDirection(direction)
-      // import google font if not already imported
-      if (googleFont) {
-        if (!document.getElementById(`font-${googleFont}`)) {
-          const link = document.createElement("link")
-          link.id = `font-${googleFont}`
-          link.href = `https://fonts.googleapis.com/css?family=${googleFont}`
-          link.rel = "stylesheet"
-          document.head.appendChild(link)
-        }
-        setGoogleFont(`${googleFont}, ${fallbackFont ?? "sans-serif"}`)
-      } else {
-        setGoogleFont(null)
-      }
-    })
-  }, [lang])
+  // useEffect(() => {
+  //   getDirectionAndFont(lang).then(([direction, googleFont, fallbackFont]) => {
+  //     setDirection(direction)
+  //     // import google font if not already imported
+  //     if (googleFont) {
+  //       if (!document.getElementById(`font-${googleFont}`)) {
+  //         const link = document.createElement("link")
+  //         link.id = `font-${googleFont}`
+  //         link.href = `https://fonts.googleapis.com/css?family=${googleFont}`
+  //         link.rel = "stylesheet"
+  //         document.head.appendChild(link)
+  //       }
+  //       setGoogleFont(`${googleFont}, ${fallbackFont ?? "sans-serif"}`)
+  //     } else {
+  //       setGoogleFont(null)
+  //     }
+  //   })
+  // }, [lang])
 
   const enableVoiceTyping = () => {
     const target = inputRef.current
@@ -695,4 +695,4 @@ export const IndicTransliterate = ({
 }
 
 export { TriggerKeys, getTransliterateSuggestions }
-export { getTransliterationLanguages }
+// export { getTransliterationLanguages }
