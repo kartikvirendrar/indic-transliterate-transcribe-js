@@ -581,6 +581,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                         fontFamily: googleFont
                     }
                 },
+                className: rest.className,
                 ...rest
             }),
             shouldRenderSuggestions && options.length > 0 && /*#__PURE__*/ (0, $jECdM$reactjsxruntime.jsx)("ul", {
@@ -611,7 +612,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                             cursor: "pointer",
                             padding: "10px",
                             minWidth: "100px",
-                            backgroundColor: "#65c3d7",
+                            backgroundColor: "#fb923c",
                             color: "#fff"
                         } : {
                             cursor: "pointer",
