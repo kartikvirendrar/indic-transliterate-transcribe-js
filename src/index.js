@@ -538,7 +538,7 @@ export const IndicTransliterate = ({
           direction: direction,
           ...(googleFont && { fontFamily: googleFont })
         },
-        className: rest.className,
+        // className: rest.className,
         ...rest
       })}
       {shouldRenderSuggestions && options.length > 0 && (
