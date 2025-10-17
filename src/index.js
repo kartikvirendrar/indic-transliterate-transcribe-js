@@ -87,6 +87,9 @@ export const IndicTransliterate = ({
     setOptions([])
   }
 
+  const lastTextValue = useRef(null);
+  const voiceLogs = useRef([]);
+
   const handleSelection = index => {
     const currentString = value
     // create a new string with the currently typed word
@@ -123,6 +126,35 @@ export const IndicTransliterate = ({
     onChangeText(newValue)
     onChange && onChange(e)
 
+    if (lastTextValue.current != null & voiceLogs.current == []) {
+      const currentValue = newValue;
+      let changeStart = 0;
+      while (
+        changeStart < lastTextValue.current.length &&
+        changeStart < currentValue.length &&
+        lastTextValue.current[changeStart] === currentValue[changeStart]
+      ) {
+        changeStart++;
+      }
+      const lengthDelta = currentValue.length - lastTextValue.current.length;
+      voiceLogs.current.forEach(log => {
+        if (changeStart > log.end) {
+          return;
+        }
+        if (changeStart <= log.start) {
+          log.start += lengthDelta;
+          log.end += lengthDelta;
+        }
+        if (changeStart > log.start && changeStart <= log.end) {
+          log.end += lengthDelta;
+        }
+        log.correctedText = currentValue.slice(log.start, log.end);
+      });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
+      }
+      lastTextValue.current = currentValue;
+    }
     reset()
     return inputRef.current?.focus()
   }
