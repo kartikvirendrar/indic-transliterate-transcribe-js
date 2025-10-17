@@ -506,6 +506,7 @@ export const IndicTransliterate = ({
           direction: direction,
           ...(googleFont && { fontFamily: googleFont })
         },
+        className: rest.className,
         ...rest
       })}
       {shouldRenderSuggestions && options.length > 0 && (
@@ -543,7 +544,7 @@ export const IndicTransliterate = ({
                     cursor: "pointer",
                     padding: "10px",
                     minWidth: "100px",
-                    backgroundColor: "#65c3d7",
+                    backgroundColor: "#fb923c",
                     color: "#fff"
                   }
                   : {
