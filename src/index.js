@@ -48,6 +48,8 @@ export const IndicTransliterate = ({
   apiKey = "",
   enableASR = false,
   asrApiUrl = "",
+  micButtonRef = null,
+  onVoiceTypingStateChange = null,
   ...rest
 }) => {
   const [left, setLeft] = useState(0)
@@ -222,9 +224,9 @@ export const IndicTransliterate = ({
         parent_uuid: parentUuid,
         word: value,
         source: typeof window !== "undefined" ?
-        localStorage.getItem("source") != undefined
-          ? localStorage.getItem("source")
-          : "node-module" : "node-module",
+          localStorage.getItem("source") != undefined
+            ? localStorage.getItem("source")
+            : "node-module" : "node-module",
         language: lang,
         steps: logJsonArray
       }
@@ -409,174 +411,67 @@ export const IndicTransliterate = ({
     })
   }, [lang])
 
-  const enableVoiceTyping = () => {
-    const target = inputRef.current
-    if (!target) return
+  const [isRecording, setIsRecording] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
-    const micBtn = document.createElement("button");
-    micBtn.innerHTML = `<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#000000" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>`;
-    micBtn.style.position = "absolute";
-    micBtn.style.padding = "5px";
-    micBtn.style.border = "none";
-    micBtn.style.cursor = "pointer";
-    micBtn.style.background = "#fff";
-    micBtn.style.borderRadius = "50%";
-    micBtn.style.boxShadow = "0 0 6px rgba(0,0,0,0.2)";
-    micBtn.style.bottom = "5px";
-    micBtn.style.right = "5px";
-    micBtn.style.width = "32px";
-    micBtn.style.height = "32px";
-    micBtn.style.display = "flex";
-    micBtn.style.alignItems = "center";
-    micBtn.style.justifyContent = "center";
+  const handleVoiceTyping = async () => {
+    if (!navigator.mediaDevices) {
+      alert("Browser doesn't support audio recording.");
+      return;
+    }
 
-    const wrapper = document.createElement("div");
-    wrapper.style.position = "relative";
-    target.parentNode.insertBefore(wrapper, target);
-    wrapper.appendChild(target);
-    wrapper.appendChild(micBtn);
-
-    let mediaRecorder, audioChunks = [], isRecording = false;
-    lastTextValue.current = target.value;
-    voiceLogs.current = [];
-
-    const showLoader = () => {
-      micBtn.innerHTML = "";
-      const spinner = document.createElement("div");
-      spinner.className = "voice-typing-spinner";
-      micBtn.appendChild(spinner);
-    };
-
-    const restoreMicIcon = () => {
-      micBtn.innerHTML = `<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#000000" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>`;
-    };
-
-    const restoreStopIcon = () => {
-      micBtn.innerHTML = '<svg viewBox="-4 -4 24.00 24.00" xmlns="http://www.w3.org/2000/svg" fill="#ff2600" class="bi bi-mic-fill"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"></path> <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"></path> </g></svg>';
-    };
-
-    micBtn.onclick = async () => {
-      if (!navigator.mediaDevices) {
-        alert("Browser doesn't support audio recording.");
-        return;
-      }
-
-      if (isRecording) {
-        mediaRecorder.stop();
-        isRecording = false;
-        showLoader();
-      } else {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+      setIsLoading(true);
+      onVoiceTypingStateChange?.('loading');
+    } else {
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
 
-        audioChunks = [];
-
-        mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+        mediaRecorder.ondataavailable = event => {
+          audioChunksRef.current.push(event.data);
+        };
 
         mediaRecorder.onstop = async () => {
-          showLoader();
-          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-          const base64Audio = await blobToBase64Raw(audioBlob);
+          setIsLoading(true);
+          onVoiceTypingStateChange?.('loading');
 
+          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const base64Audio = await blobToBase64Raw(audioBlob);
           const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
 
-          const cursorPos = target.selectionStart;
-          const currentText = target.value;
-          const transcriptLength = transcript.length;
+          const target = inputRef.current;
+          if (target) {
+            const cursorPos = target.selectionStart;
+            const currentText = value;
+            const newValue = currentText.slice(0, cursorPos) + transcript + currentText.slice(cursorPos);
 
-          target.value = currentText.slice(0, cursorPos) + transcript + currentText.slice(cursorPos);
-          onChangeText(target.value);
-
-          voiceLogs.current.forEach(log => {
-            if (log.start >= cursorPos) {
-              log.start += transcriptLength;
-              log.end += transcriptLength;
-            }
-          });
-
-          const newLog = {
-            id: new Date().toISOString(),
-            audioBase64: base64Audio,
-            initialTranscript: transcript,
-            correctedText: transcript,
-            start: cursorPos,
-            end: cursorPos + transcriptLength
-          };
-          voiceLogs.current.push(newLog);
-          voiceLogs.current.sort((a, b) => a.start - b.start);
-
-          if (typeof window !== "undefined") {
-            localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
+            const e = { target: { value: newValue } };
+            onChange?.(e);
+            onChangeText(newValue);
           }
 
-          lastTextValue.current = target.value;
-          restoreMicIcon();
+          setIsLoading(false);
+          onVoiceTypingStateChange?.('idle');
         };
 
         mediaRecorder.start();
-        isRecording = true;
-        restoreStopIcon();
+        setIsRecording(true);
+        onVoiceTypingStateChange?.('recording');
+      } catch (err) {
+        console.error("Error accessing microphone:", err);
+        setIsRecording(false);
+        setIsLoading(false);
+        onVoiceTypingStateChange?.('idle');
       }
-    };
-
-    target.addEventListener("input", () => {
-      const currentValue = target.value;
-      let changeStart = 0;
-      while (
-        changeStart < lastTextValue.current.length &&
-        changeStart < currentValue.length &&
-        lastTextValue.current[changeStart] === currentValue[changeStart]
-      ) {
-        changeStart++;
-      }
-
-      const lengthDelta = currentValue.length - lastTextValue.current.length;
-
-      voiceLogs.current.forEach(log => {
-        if (changeStart > log.end) {
-          return;
-        }
-        if (changeStart <= log.start) {
-          log.start += lengthDelta;
-          log.end += lengthDelta;
-        }
-        if (changeStart > log.start && changeStart <= log.end) {
-          log.end += lengthDelta;
-        }
-
-        log.correctedText = currentValue.slice(log.start, log.end);
-      });
-
-      voiceLogs.current = voiceLogs.current.filter(log => log.start < log.end);
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("voiceLogs", JSON.stringify(voiceLogs.current));
-      }
-
-      lastTextValue.current = currentValue;
-    });
-
-    if (!document.getElementById("voice-typing-spinner-style")) {
-      const style = document.createElement("style");
-      style.id = "voice-typing-spinner-style";
-      style.innerHTML = `
-      .voice-typing-spinner {
-        width: 16px;
-        height: 16px;
-        border: 3px solid #ccc;
-        border-top: 3px solid #333;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-      document.head.appendChild(style);
     }
-  }
+  };
 
   async function blobToBase64Raw(blob) {
     const arrayBuffer = await blob.arrayBuffer()
@@ -605,10 +500,21 @@ export const IndicTransliterate = ({
   }
 
   useEffect(() => {
-    if (enableASR) {
-      enableVoiceTyping()
+    if (enableASR && micButtonRef?.current) {
+      const button = micButtonRef.current;
+
+      button.addEventListener('click', handleVoiceTyping);
+
+      return () => {
+        button.removeEventListener('click', handleVoiceTyping);
+
+        if (mediaRecorderRef.current && isRecording) {
+          mediaRecorderRef.current.stop();
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+      };
     }
-  }, [enableASR])
+  }, [enableASR, micButtonRef, isRecording, value, lang]);
 
   return (
     <div
