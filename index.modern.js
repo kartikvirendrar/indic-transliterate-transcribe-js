@@ -568,7 +568,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                         fontFamily: googleFont
                     }
                 },
-                className: rest.className,
+                // className: rest.className,
                 ...rest
             }),
             shouldRenderSuggestions && options.length > 0 && /*#__PURE__*/ (0, $WrkLT$jsx)("ul", {
