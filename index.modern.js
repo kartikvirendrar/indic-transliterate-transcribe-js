@@ -1,4 +1,4 @@
-import {jsx as $WrkLT$jsx, jsxs as $WrkLT$jsxs} from "react/jsx-runtime";
+import {jsx as $WrkLT$jsx, jsxs as $WrkLT$jsxs, Fragment as $WrkLT$Fragment} from "react/jsx-runtime";
 import {useState as $WrkLT$useState, useRef as $WrkLT$useRef, useMemo as $WrkLT$useMemo, useEffect as $WrkLT$useEffect} from "react";
 import $WrkLT$textareacaret from "textarea-caret";
 
@@ -522,14 +522,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         value,
         lang
     ]);
-    return /*#__PURE__*/ (0, $WrkLT$jsxs)("div", {
-        // position relative is required to show the component
-        // in the correct position
-        style: {
-            ...containerStyles,
-            position: "relative"
-        },
-        className: containerClassName,
+    return /*#__PURE__*/ (0, $WrkLT$jsxs)((0, $WrkLT$Fragment), {
         children: [
             renderComponent({
                 onChange: handleChange,

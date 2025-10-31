@@ -534,14 +534,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         value,
         lang
     ]);
-    return /*#__PURE__*/ (0, $jECdM$reactjsxruntime.jsxs)("div", {
-        // position relative is required to show the component
-        // in the correct position
-        style: {
-            ...containerStyles,
-            position: "relative"
-        },
-        className: containerClassName,
+    return /*#__PURE__*/ (0, $jECdM$reactjsxruntime.jsxs)((0, $jECdM$reactjsxruntime.Fragment), {
         children: [
             renderComponent({
                 onChange: handleChange,
