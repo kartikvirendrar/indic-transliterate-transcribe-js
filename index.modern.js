@@ -169,7 +169,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
     (0, $871e300faf449d5f$export$24b0ea3375909d37).KEY_ENTER,
     (0, $871e300faf449d5f$export$24b0ea3375909d37).KEY_RETURN,
     (0, $871e300faf449d5f$export$24b0ea3375909d37).KEY_TAB
-], insertCurrentSelectionOnBlur: insertCurrentSelectionOnBlur = true, showCurrentWordAsLastSuggestion: showCurrentWordAsLastSuggestion = true, enabled: enabled = true, horizontalView: horizontalView = false, customApiURL: customApiURL = (0, $380c1a0df2fde1d3$export$a238c5e20ae27fe7), apiKey: apiKey = "", enableASR: enableASR = false, asrApiUrl: asrApiUrl = "", micButtonRef: micButtonRef = null, onVoiceTypingStateChange: onVoiceTypingStateChange = null, ...rest })=>{
+], insertCurrentSelectionOnBlur: insertCurrentSelectionOnBlur = true, showCurrentWordAsLastSuggestion: showCurrentWordAsLastSuggestion = true, enabled: enabled = true, horizontalView: horizontalView = false, suggestionListClassName: suggestionListClassName = "", suggestionItemClassName: suggestionItemClassName = "", activeSuggestionItemClassName: activeSuggestionItemClassName = "", customApiURL: customApiURL = (0, $380c1a0df2fde1d3$export$a238c5e20ae27fe7), apiKey: apiKey = "", enableASR: enableASR = false, asrApiUrl: asrApiUrl = "", micButtonRef: micButtonRef = null, onVoiceTypingStateChange: onVoiceTypingStateChange = null, ...rest })=>{
     const [left, setLeft] = (0, $WrkLT$useState)(0);
     const [top, setTop] = (0, $WrkLT$useState)(0);
     const [selection, setSelection] = (0, $WrkLT$useState)(0);
@@ -574,43 +574,26 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             shouldRenderSuggestions && options.length > 0 && /*#__PURE__*/ (0, $WrkLT$jsx)("ul", {
                 onMouseDown: (e)=>e.preventDefault(),
                 style: {
-                    backgroundClip: "padding-box",
-                    backgroundColor: "#fff",
-                    border: "1px solid rgba(0, 0, 0, 0.15)",
-                    boxShadow: "0 6px 12px rgba(0, 0, 0, 0.175)",
-                    display: horizontalView ? "flex" : "block",
-                    fontSize: "14px",
-                    listStyle: "none",
-                    padding: "1px",
-                    textAlign: "center",
-                    zIndex: 20000,
                     left: `${left + offsetX}px`,
                     top: `${top + offsetY}px`,
                     position: "absolute",
-                    width: "auto",
+                    zIndex: 20000,
                     ...googleFont && {
                         fontFamily: googleFont
                     }
                 },
+                className: suggestionListClassName,
                 "data-testid": "rt-suggestions-list",
                 lang: lang,
+                role: "listbox",
                 children: Array.from(new Set(options)).map((item, index)=>/*#__PURE__*/ (0, $WrkLT$jsx)("li", {
-                        style: index === selection ? {
-                            cursor: "pointer",
-                            padding: "10px",
-                            minWidth: "100px",
-                            backgroundColor: "#fb923c",
-                            color: "#fff"
-                        } : {
-                            cursor: "pointer",
-                            padding: "10px",
-                            minWidth: "100px",
-                            backgroundColor: "#fff"
-                        },
+                        className: index === selection ? activeSuggestionItemClassName : suggestionItemClassName,
                         onMouseEnter: ()=>{
                             setSelection(index);
                         },
                         onClick: ()=>handleSelection(index),
+                        role: "option",
+                        "aria-selected": index === selection,
                         children: item
                     }, item))
             })
