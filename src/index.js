@@ -541,7 +541,6 @@ export const IndicTransliterate = ({
           onMouseDown={e => e.preventDefault()}
           style={{
             left: `${left + offsetX}px`,
-            top: `${top + offsetY}px`,
             position: "absolute",
             zIndex: 20000,
             ...(googleFont && { fontFamily: googleFont })
