@@ -488,15 +488,7 @@ export const IndicTransliterate = ({
   }, [enableASR, micButtonRef, isRecording, value, lang]);
 
   return (
-    <div
-      // position relative is required to show the component
-      // in the correct position
-      style={{
-        ...containerStyles,
-        position: "relative"
-      }}
-      className={containerClassName}
-    >
+    <>
       {renderComponent({
         onChange: handleChange,
         onKeyDown: handleKeyDown,
@@ -551,7 +543,7 @@ export const IndicTransliterate = ({
           ))}
         </ul>
       )}
-    </div>
+    </>
   )
 }
 
