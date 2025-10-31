@@ -44,6 +44,9 @@ export const IndicTransliterate = ({
   showCurrentWordAsLastSuggestion = true,
   enabled = true,
   horizontalView = false,
+  suggestionListClassName = "",
+  suggestionItemClassName = "",
+  activeSuggestionItemClassName = "",
   customApiURL = BASE_URL_TL,
   apiKey = "",
   enableASR = false,
@@ -545,24 +548,16 @@ export const IndicTransliterate = ({
         <ul
           onMouseDown={e => e.preventDefault()}
           style={{
-            backgroundClip: "padding-box",
-            backgroundColor: "#fff",
-            border: "1px solid rgba(0, 0, 0, 0.15)",
-            boxShadow: "0 6px 12px rgba(0, 0, 0, 0.175)",
-            display: horizontalView ? "flex" : "block",
-            fontSize: "14px",
-            listStyle: "none",
-            padding: "1px",
-            textAlign: "center",
-            zIndex: 20000,
             left: `${left + offsetX}px`,
             top: `${top + offsetY}px`,
             position: "absolute",
-            width: "auto",
+            zIndex: 20000,
             ...(googleFont && { fontFamily: googleFont })
           }}
+          className={suggestionListClassName}
           data-testid="rt-suggestions-list"
           lang={lang}
+          role="listbox"
         >
           {/*
            * convert to set and back to prevent duplicate list items
@@ -570,27 +565,18 @@ export const IndicTransliterate = ({
            */}
           {Array.from(new Set(options)).map((item, index) => (
             <li
-              style={
+              className={
                 index === selection
-                  ? {
-                    cursor: "pointer",
-                    padding: "10px",
-                    minWidth: "100px",
-                    backgroundColor: "#fb923c",
-                    color: "#fff"
-                  }
-                  : {
-                    cursor: "pointer",
-                    padding: "10px",
-                    minWidth: "100px",
-                    backgroundColor: "#fff"
-                  }
+                  ? activeSuggestionItemClassName
+                  : suggestionItemClassName
               }
               onMouseEnter={() => {
                 setSelection(index)
               }}
               onClick={() => handleSelection(index)}
               key={item}
+              role="option"
+              aria-selected={index === selection}
             >
               {item}
             </li>
