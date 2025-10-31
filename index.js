@@ -178,21 +178,6 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
     const [uuid, setUuid] = (0, $jECdM$react.useState)(Math.random().toString(36).substr(2, 9));
     const [subStrLength, setSubStrLength] = (0, $jECdM$react.useState)(0);
     const [restart, setRestart] = (0, $jECdM$react.useState)(true);
-    const suggestionBoxRef = (0, $jECdM$react.useRef)(null);
-    const isMobile = windowSize.width > 0 && windowSize.width < hideSuggestionBoxBreakpoint;
-    (0, $jECdM$react.useEffect)(()=>{
-        if (suggestionBoxRef.current && inputRef.current?.parentElement && !isMobile) {
-            const suggestionBox = suggestionBoxRef.current;
-            const parentContainer = inputRef.current.parentElement;
-            const parentRect = parentContainer.getBoundingClientRect();
-            const suggestionBoxRect = suggestionBox.getBoundingClientRect();
-            if (suggestionBoxRect.right > parentRect.right) suggestionBox.style.left = `${parentRect.width - suggestionBoxRect.width - 8}px`;
-        }
-    }, [
-        left,
-        options,
-        isMobile
-    ]);
     const shouldRenderSuggestions = (0, $jECdM$react.useMemo)(()=>hideSuggestionBoxOnMobileDevices ? windowSize.width > hideSuggestionBoxBreakpoint : true, [
         windowSize,
         hideSuggestionBoxBreakpoint,
@@ -569,16 +554,12 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 ...rest
             }),
             shouldRenderSuggestions && options.length > 0 && /*#__PURE__*/ (0, $jECdM$reactjsxruntime.jsx)("ul", {
-                ref: suggestionBoxRef,
                 onMouseDown: (e)=>e.preventDefault(),
                 style: {
                     position: "absolute",
                     zIndex: 20000,
                     ...googleFont && {
                         fontFamily: googleFont
-                    },
-                    ...!isMobile && {
-                        left: `${left + offsetX}px`
                     }
                 },
                 className: suggestionListClassName,

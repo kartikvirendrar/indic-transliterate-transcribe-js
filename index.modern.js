@@ -1,5 +1,5 @@
 import {jsx as $WrkLT$jsx, jsxs as $WrkLT$jsxs, Fragment as $WrkLT$Fragment} from "react/jsx-runtime";
-import {useState as $WrkLT$useState, useRef as $WrkLT$useRef, useEffect as $WrkLT$useEffect, useMemo as $WrkLT$useMemo} from "react";
+import {useState as $WrkLT$useState, useRef as $WrkLT$useRef, useMemo as $WrkLT$useMemo, useEffect as $WrkLT$useEffect} from "react";
 import $WrkLT$textareacaret from "textarea-caret";
 
 
@@ -166,21 +166,6 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
     const [uuid, setUuid] = (0, $WrkLT$useState)(Math.random().toString(36).substr(2, 9));
     const [subStrLength, setSubStrLength] = (0, $WrkLT$useState)(0);
     const [restart, setRestart] = (0, $WrkLT$useState)(true);
-    const suggestionBoxRef = (0, $WrkLT$useRef)(null);
-    const isMobile = windowSize.width > 0 && windowSize.width < hideSuggestionBoxBreakpoint;
-    (0, $WrkLT$useEffect)(()=>{
-        if (suggestionBoxRef.current && inputRef.current?.parentElement && !isMobile) {
-            const suggestionBox = suggestionBoxRef.current;
-            const parentContainer = inputRef.current.parentElement;
-            const parentRect = parentContainer.getBoundingClientRect();
-            const suggestionBoxRect = suggestionBox.getBoundingClientRect();
-            if (suggestionBoxRect.right > parentRect.right) suggestionBox.style.left = `${parentRect.width - suggestionBoxRect.width - 8}px`;
-        }
-    }, [
-        left,
-        options,
-        isMobile
-    ]);
     const shouldRenderSuggestions = (0, $WrkLT$useMemo)(()=>hideSuggestionBoxOnMobileDevices ? windowSize.width > hideSuggestionBoxBreakpoint : true, [
         windowSize,
         hideSuggestionBoxBreakpoint,
@@ -557,16 +542,12 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 ...rest
             }),
             shouldRenderSuggestions && options.length > 0 && /*#__PURE__*/ (0, $WrkLT$jsx)("ul", {
-                ref: suggestionBoxRef,
                 onMouseDown: (e)=>e.preventDefault(),
                 style: {
                     position: "absolute",
                     zIndex: 20000,
                     ...googleFont && {
                         fontFamily: googleFont
-                    },
-                    ...!isMobile && {
-                        left: `${left + offsetX}px`
                     }
                 },
                 className: suggestionListClassName,
