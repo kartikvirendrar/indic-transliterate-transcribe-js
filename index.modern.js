@@ -545,7 +545,6 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 onMouseDown: (e)=>e.preventDefault(),
                 style: {
                     left: `${left + offsetX}px`,
-                    top: `${top + offsetY}px`,
                     position: "absolute",
                     zIndex: 20000,
                     ...googleFont && {
