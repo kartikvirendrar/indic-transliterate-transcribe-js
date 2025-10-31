@@ -31,7 +31,7 @@ export const IndicTransliterate = ({
   activeItemStyles = {},
   maxOptions = 5,
   hideSuggestionBoxOnMobileDevices = false,
-  hideSuggestionBoxBreakpoint = 450,
+  hideSuggestionBoxBreakpoint = 640,
 
   triggerKeys = [
     TriggerKeys.KEY_SPACE,
@@ -75,6 +75,23 @@ export const IndicTransliterate = ({
   )
   const [subStrLength, setSubStrLength] = useState(0)
   const [restart, setRestart] = useState(true)
+  const suggestionBoxRef = useRef(null)
+
+  const isMobile = windowSize.width > 0 && windowSize.width < hideSuggestionBoxBreakpoint;
+
+  useEffect(() => {
+    if (suggestionBoxRef.current && inputRef.current?.parentElement && !isMobile) {
+      const suggestionBox = suggestionBoxRef.current;
+      const parentContainer = inputRef.current.parentElement;
+
+      const parentRect = parentContainer.getBoundingClientRect();
+      const suggestionBoxRect = suggestionBox.getBoundingClientRect();
+
+      if (suggestionBoxRect.right > parentRect.right) {
+        suggestionBox.style.left = `${parentRect.width - suggestionBoxRect.width - 8}px`;
+      }
+    }
+  }, [left, options, isMobile]); 
 
   const shouldRenderSuggestions = useMemo(
     () =>
@@ -506,12 +523,13 @@ export const IndicTransliterate = ({
       })}
       {shouldRenderSuggestions && options.length > 0 && (
         <ul
+          ref={suggestionBoxRef}
           onMouseDown={e => e.preventDefault()}
           style={{
-            left: `${left + offsetX}px`,
             position: "absolute",
             zIndex: 20000,
-            ...(googleFont && { fontFamily: googleFont })
+            ...(googleFont && { fontFamily: googleFont }),
+            ...(!isMobile && { left: `${left + offsetX}px` }),
           }}
           className={suggestionListClassName}
           data-testid="rt-suggestions-list"
@@ -529,9 +547,7 @@ export const IndicTransliterate = ({
                   ? activeSuggestionItemClassName
                   : suggestionItemClassName
               }
-              onMouseEnter={() => {
-                setSelection(index)
-              }}
+              onMouseEnter={() => {setSelection(index)}}
               onClick={() => handleSelection(index)}
               key={item}
               role="option"
