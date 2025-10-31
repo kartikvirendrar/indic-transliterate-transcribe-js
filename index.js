@@ -14,7 +14,6 @@ function $parcel$export(e, n, v, s) {
 $parcel$export(module.exports, "IndicTransliterate", function () { return $0e1b765668e4d0aa$export$a62758b764e9e41d; });
 $parcel$export(module.exports, "TriggerKeys", function () { return $7f12c5bac20ed9d3$export$24b0ea3375909d37; });
 $parcel$export(module.exports, "getTransliterateSuggestions", function () { return $857753f052b25831$export$27f30d10c00bcc6c; });
-$parcel$export(module.exports, "getTransliterationLanguages", function () { return $470b763f7b4d7774$export$58f2e270169de9d3; });
 
 
 function $0ecfe4a0401ba76b$export$e27e3030245d4c9b() {
@@ -143,29 +142,6 @@ window.addEventListener("beforeunload", $857753f052b25831$var$saveCacheToLocalSt
 
 const $2b6bcc00ef7a3078$export$ca6dda5263526f75 = "https://xlit-api.ai4bharat.org/";
 const $2b6bcc00ef7a3078$export$a238c5e20ae27fe7 = "https://xlit-api.ai4bharat.org/tl/";
-
-
-const $470b763f7b4d7774$export$58f2e270169de9d3 = async ()=>{
-    if (sessionStorage.getItem("indic_transliterate__supported_languages")) return JSON.parse(sessionStorage.getItem("indic_transliterate__supported_languages") || "");
-    else {
-        const apiURL = `${(0, $2b6bcc00ef7a3078$export$ca6dda5263526f75)}languages`;
-        const myHeaders = new Headers();
-        myHeaders.append("Content-Type", "application/json");
-        const requestOptions = {
-            method: "GET"
-        };
-        try {
-            const res = await fetch(apiURL, requestOptions);
-            const data = await res.json();
-            sessionStorage.setItem("indic_transliterate__supported_languages", JSON.stringify(data));
-            return data;
-        } catch (e) {
-            console.error("There was an error with transliteration", e);
-            return [];
-        }
-    }
-};
-
 
 
 const $0e1b765668e4d0aa$var$KEY_UP = "ArrowUp";
@@ -297,15 +273,15 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             logJson
         ]);
     };
-    const getDirectionAndFont = async (lang)=>{
-        const langList = await (0, $470b763f7b4d7774$export$58f2e270169de9d3)();
-        const langObj = langList?.find((l)=>l.LangCode === lang);
-        return [
-            langObj?.Direction ?? "ltr",
-            langObj?.GoogleFont,
-            langObj?.FallbackFont
-        ];
-    };
+    // const getDirectionAndFont = async lang => {
+    //   const langList = await getTransliterationLanguages()
+    //   const langObj = langList?.find(l => l.LangCode === lang)
+    //   return [
+    //     langObj?.Direction ?? "ltr",
+    //     langObj?.GoogleFont,
+    //     langObj?.FallbackFont
+    //   ]
+    // }
     const handleChange = (e)=>{
         const value = e.currentTarget.value;
         if (numSpaces == 0 || restart) {
@@ -436,24 +412,24 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             window.removeEventListener("resize", handleResize);
         };
     }, []);
-    (0, $jECdM$react.useEffect)(()=>{
-        getDirectionAndFont(lang).then(([direction, googleFont, fallbackFont])=>{
-            setDirection(direction);
-            // import google font if not already imported
-            if (googleFont) {
-                if (!document.getElementById(`font-${googleFont}`)) {
-                    const link = document.createElement("link");
-                    link.id = `font-${googleFont}`;
-                    link.href = `https://fonts.googleapis.com/css?family=${googleFont}`;
-                    link.rel = "stylesheet";
-                    document.head.appendChild(link);
-                }
-                setGoogleFont(`${googleFont}, ${fallbackFont ?? "sans-serif"}`);
-            } else setGoogleFont(null);
-        });
-    }, [
-        lang
-    ]);
+    // useEffect(() => {
+    //   getDirectionAndFont(lang).then(([direction, googleFont, fallbackFont]) => {
+    //     setDirection(direction)
+    //     // import google font if not already imported
+    //     if (googleFont) {
+    //       if (!document.getElementById(`font-${googleFont}`)) {
+    //         const link = document.createElement("link")
+    //         link.id = `font-${googleFont}`
+    //         link.href = `https://fonts.googleapis.com/css?family=${googleFont}`
+    //         link.rel = "stylesheet"
+    //         document.head.appendChild(link)
+    //       }
+    //       setGoogleFont(`${googleFont}, ${fallbackFont ?? "sans-serif"}`)
+    //     } else {
+    //       setGoogleFont(null)
+    //     }
+    //   })
+    // }, [lang])
     const [isRecording, setIsRecording] = (0, $jECdM$react.useState)(false);
     const [isLoading, setIsLoading] = (0, $jECdM$react.useState)(false);
     const mediaRecorderRef = (0, $jECdM$react.useRef)(null);
@@ -613,6 +589,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         ]
     });
 };
+ // export { getTransliterationLanguages }
 
 
 //# sourceMappingURL=index.js.map

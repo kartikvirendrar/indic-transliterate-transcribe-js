@@ -132,29 +132,6 @@ const $380c1a0df2fde1d3$export$ca6dda5263526f75 = "https://xlit-api.ai4bharat.or
 const $380c1a0df2fde1d3$export$a238c5e20ae27fe7 = "https://xlit-api.ai4bharat.org/tl/";
 
 
-const $c2974e9c75fb7561$export$58f2e270169de9d3 = async ()=>{
-    if (sessionStorage.getItem("indic_transliterate__supported_languages")) return JSON.parse(sessionStorage.getItem("indic_transliterate__supported_languages") || "");
-    else {
-        const apiURL = `${(0, $380c1a0df2fde1d3$export$ca6dda5263526f75)}languages`;
-        const myHeaders = new Headers();
-        myHeaders.append("Content-Type", "application/json");
-        const requestOptions = {
-            method: "GET"
-        };
-        try {
-            const res = await fetch(apiURL, requestOptions);
-            const data = await res.json();
-            sessionStorage.setItem("indic_transliterate__supported_languages", JSON.stringify(data));
-            return data;
-        } catch (e) {
-            console.error("There was an error with transliteration", e);
-            return [];
-        }
-    }
-};
-
-
-
 const $86cfb7ad4842cd1e$var$KEY_UP = "ArrowUp";
 const $86cfb7ad4842cd1e$var$KEY_DOWN = "ArrowDown";
 const $86cfb7ad4842cd1e$var$KEY_LEFT = "ArrowLeft";
@@ -284,15 +261,15 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             logJson
         ]);
     };
-    const getDirectionAndFont = async (lang)=>{
-        const langList = await (0, $c2974e9c75fb7561$export$58f2e270169de9d3)();
-        const langObj = langList?.find((l)=>l.LangCode === lang);
-        return [
-            langObj?.Direction ?? "ltr",
-            langObj?.GoogleFont,
-            langObj?.FallbackFont
-        ];
-    };
+    // const getDirectionAndFont = async lang => {
+    //   const langList = await getTransliterationLanguages()
+    //   const langObj = langList?.find(l => l.LangCode === lang)
+    //   return [
+    //     langObj?.Direction ?? "ltr",
+    //     langObj?.GoogleFont,
+    //     langObj?.FallbackFont
+    //   ]
+    // }
     const handleChange = (e)=>{
         const value = e.currentTarget.value;
         if (numSpaces == 0 || restart) {
@@ -423,24 +400,24 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             window.removeEventListener("resize", handleResize);
         };
     }, []);
-    (0, $WrkLT$useEffect)(()=>{
-        getDirectionAndFont(lang).then(([direction, googleFont, fallbackFont])=>{
-            setDirection(direction);
-            // import google font if not already imported
-            if (googleFont) {
-                if (!document.getElementById(`font-${googleFont}`)) {
-                    const link = document.createElement("link");
-                    link.id = `font-${googleFont}`;
-                    link.href = `https://fonts.googleapis.com/css?family=${googleFont}`;
-                    link.rel = "stylesheet";
-                    document.head.appendChild(link);
-                }
-                setGoogleFont(`${googleFont}, ${fallbackFont ?? "sans-serif"}`);
-            } else setGoogleFont(null);
-        });
-    }, [
-        lang
-    ]);
+    // useEffect(() => {
+    //   getDirectionAndFont(lang).then(([direction, googleFont, fallbackFont]) => {
+    //     setDirection(direction)
+    //     // import google font if not already imported
+    //     if (googleFont) {
+    //       if (!document.getElementById(`font-${googleFont}`)) {
+    //         const link = document.createElement("link")
+    //         link.id = `font-${googleFont}`
+    //         link.href = `https://fonts.googleapis.com/css?family=${googleFont}`
+    //         link.rel = "stylesheet"
+    //         document.head.appendChild(link)
+    //       }
+    //       setGoogleFont(`${googleFont}, ${fallbackFont ?? "sans-serif"}`)
+    //     } else {
+    //       setGoogleFont(null)
+    //     }
+    //   })
+    // }, [lang])
     const [isRecording, setIsRecording] = (0, $WrkLT$useState)(false);
     const [isLoading, setIsLoading] = (0, $WrkLT$useState)(false);
     const mediaRecorderRef = (0, $WrkLT$useRef)(null);
@@ -600,7 +577,8 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         ]
     });
 };
+ // export { getTransliterationLanguages }
 
 
-export {$86cfb7ad4842cd1e$export$a62758b764e9e41d as IndicTransliterate, $871e300faf449d5f$export$24b0ea3375909d37 as TriggerKeys, $cb083382c5991590$export$27f30d10c00bcc6c as getTransliterateSuggestions, $c2974e9c75fb7561$export$58f2e270169de9d3 as getTransliterationLanguages};
+export {$86cfb7ad4842cd1e$export$a62758b764e9e41d as IndicTransliterate, $871e300faf449d5f$export$24b0ea3375909d37 as TriggerKeys, $cb083382c5991590$export$27f30d10c00bcc6c as getTransliterateSuggestions};
 //# sourceMappingURL=index.modern.js.map
