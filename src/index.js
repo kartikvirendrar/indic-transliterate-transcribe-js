@@ -75,23 +75,6 @@ export const IndicTransliterate = ({
   )
   const [subStrLength, setSubStrLength] = useState(0)
   const [restart, setRestart] = useState(true)
-  const suggestionBoxRef = useRef(null)
-
-  const isMobile = windowSize.width > 0 && windowSize.width < hideSuggestionBoxBreakpoint;
-
-  useEffect(() => {
-    if (suggestionBoxRef.current && inputRef.current?.parentElement && !isMobile) {
-      const suggestionBox = suggestionBoxRef.current;
-      const parentContainer = inputRef.current.parentElement;
-
-      const parentRect = parentContainer.getBoundingClientRect();
-      const suggestionBoxRect = suggestionBox.getBoundingClientRect();
-
-      if (suggestionBoxRect.right > parentRect.right) {
-        suggestionBox.style.left = `${parentRect.width - suggestionBoxRect.width - 8}px`;
-      }
-    }
-  }, [left, options, isMobile]); 
 
   const shouldRenderSuggestions = useMemo(
     () =>
@@ -555,13 +538,11 @@ export const IndicTransliterate = ({
       })}
       {shouldRenderSuggestions && options.length > 0 && (
         <ul
-          ref={suggestionBoxRef}
           onMouseDown={e => e.preventDefault()}
           style={{
             position: "absolute",
             zIndex: 20000,
             ...(googleFont && { fontFamily: googleFont }),
-            ...(!isMobile && { left: `${left + offsetX}px` }),
           }}
           className={suggestionListClassName}
           data-testid="rt-suggestions-list"
