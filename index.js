@@ -17,6 +17,7 @@ $parcel$export(module.exports, "getTransliterateSuggestions", function () { retu
 
 
 function $0ecfe4a0401ba76b$export$e27e3030245d4c9b() {
+    if (typeof window === "undefined") return false;
     return "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 }
 
@@ -64,12 +65,21 @@ const $857753f052b25831$var$CACHE_KEY = "transliterationCache";
 const $857753f052b25831$var$cache = $857753f052b25831$var$loadCacheFromLocalStorage();
 let $857753f052b25831$var$newEntriesCount = 0;
 function $857753f052b25831$var$loadCacheFromLocalStorage() {
-    let cachedData = "";
-    if (typeof window !== "undefined") cachedData = localStorage.getItem($857753f052b25831$var$CACHE_KEY);
-    return cachedData ? JSON.parse(cachedData) : {};
+    if (typeof window === "undefined") return {};
+    try {
+        const cachedData = window.localStorage.getItem($857753f052b25831$var$CACHE_KEY);
+        return cachedData ? JSON.parse(cachedData) : {};
+    } catch (e) {
+        return {};
+    }
 }
 function $857753f052b25831$var$saveCacheToLocalStorage() {
-    if (typeof window !== "undefined") localStorage.setItem($857753f052b25831$var$CACHE_KEY, JSON.stringify($857753f052b25831$var$cache));
+    if (typeof window === "undefined") return;
+    try {
+        window.localStorage.setItem($857753f052b25831$var$CACHE_KEY, JSON.stringify($857753f052b25831$var$cache));
+    } catch (e) {
+    // storage disabled, quota exceeded, or SecurityError — ignore
+    }
 }
 const $857753f052b25831$var$getWordWithLowestFrequency = (dictionary)=>{
     let lowestFreqWord = null;
@@ -137,13 +147,15 @@ const $857753f052b25831$export$27f30d10c00bcc6c = async (word, customApiURL, api
         return [];
     }
 };
-window.addEventListener("beforeunload", $857753f052b25831$var$saveCacheToLocalStorage);
+if (typeof window !== "undefined") window.addEventListener("beforeunload", $857753f052b25831$var$saveCacheToLocalStorage);
 
 
 const $2b6bcc00ef7a3078$export$ca6dda5263526f75 = "https://xlit-api.ai4bharat.org/";
 const $2b6bcc00ef7a3078$export$a238c5e20ae27fe7 = "https://xlit-api.ai4bharat.org/tl/";
 
 
+"use client";
+const $0e1b765668e4d0aa$var$generateUuid = ()=>Math.random().toString(36).slice(2, 11);
 const $0e1b765668e4d0aa$var$KEY_UP = "ArrowUp";
 const $0e1b765668e4d0aa$var$KEY_DOWN = "ArrowDown";
 const $0e1b765668e4d0aa$var$KEY_LEFT = "ArrowLeft";
@@ -175,9 +187,12 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
     const [logJsonArray, setLogJsonArray] = (0, $jECdM$react.useState)([]);
     const [numSpaces, setNumSpaces] = (0, $jECdM$react.useState)(0);
     const [parentUuid, setParentUuid] = (0, $jECdM$react.useState)("0");
-    const [uuid, setUuid] = (0, $jECdM$react.useState)(Math.random().toString(36).substr(2, 9));
+    const [uuid, setUuid] = (0, $jECdM$react.useState)("");
     const [subStrLength, setSubStrLength] = (0, $jECdM$react.useState)(0);
     const [restart, setRestart] = (0, $jECdM$react.useState)(true);
+    (0, $jECdM$react.useEffect)(()=>{
+        setUuid($0e1b765668e4d0aa$var$generateUuid());
+    }, []);
     const shouldRenderSuggestions = (0, $jECdM$react.useMemo)(()=>hideSuggestionBoxOnMobileDevices ? windowSize.width > hideSuggestionBoxBreakpoint : true, [
         windowSize,
         hideSuggestionBoxBreakpoint,
@@ -299,7 +314,7 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             };
             setLogJsonArray([]);
             setParentUuid(uuid);
-            setUuid(Math.random().toString(36).substr(2, 9));
+            setUuid($0e1b765668e4d0aa$var$generateUuid());
             setSubStrLength(value.length - 2);
             setNumSpaces(0);
             setRestart(true);

@@ -1,10 +1,11 @@
 import {jsx as $WrkLT$jsx, jsxs as $WrkLT$jsxs, Fragment as $WrkLT$Fragment} from "react/jsx-runtime";
-import {useState as $WrkLT$useState, useRef as $WrkLT$useRef, useMemo as $WrkLT$useMemo, useEffect as $WrkLT$useEffect} from "react";
+import {useState as $WrkLT$useState, useRef as $WrkLT$useRef, useEffect as $WrkLT$useEffect, useMemo as $WrkLT$useMemo} from "react";
 import $WrkLT$textareacaret from "textarea-caret";
 
 
 
 function $9acf2116f29b30de$export$e27e3030245d4c9b() {
+    if (typeof window === "undefined") return false;
     return "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 }
 
@@ -52,12 +53,21 @@ const $cb083382c5991590$var$CACHE_KEY = "transliterationCache";
 const $cb083382c5991590$var$cache = $cb083382c5991590$var$loadCacheFromLocalStorage();
 let $cb083382c5991590$var$newEntriesCount = 0;
 function $cb083382c5991590$var$loadCacheFromLocalStorage() {
-    let cachedData = "";
-    if (typeof window !== "undefined") cachedData = localStorage.getItem($cb083382c5991590$var$CACHE_KEY);
-    return cachedData ? JSON.parse(cachedData) : {};
+    if (typeof window === "undefined") return {};
+    try {
+        const cachedData = window.localStorage.getItem($cb083382c5991590$var$CACHE_KEY);
+        return cachedData ? JSON.parse(cachedData) : {};
+    } catch (e) {
+        return {};
+    }
 }
 function $cb083382c5991590$var$saveCacheToLocalStorage() {
-    if (typeof window !== "undefined") localStorage.setItem($cb083382c5991590$var$CACHE_KEY, JSON.stringify($cb083382c5991590$var$cache));
+    if (typeof window === "undefined") return;
+    try {
+        window.localStorage.setItem($cb083382c5991590$var$CACHE_KEY, JSON.stringify($cb083382c5991590$var$cache));
+    } catch (e) {
+    // storage disabled, quota exceeded, or SecurityError — ignore
+    }
 }
 const $cb083382c5991590$var$getWordWithLowestFrequency = (dictionary)=>{
     let lowestFreqWord = null;
@@ -125,13 +135,15 @@ const $cb083382c5991590$export$27f30d10c00bcc6c = async (word, customApiURL, api
         return [];
     }
 };
-window.addEventListener("beforeunload", $cb083382c5991590$var$saveCacheToLocalStorage);
+if (typeof window !== "undefined") window.addEventListener("beforeunload", $cb083382c5991590$var$saveCacheToLocalStorage);
 
 
 const $380c1a0df2fde1d3$export$ca6dda5263526f75 = "https://xlit-api.ai4bharat.org/";
 const $380c1a0df2fde1d3$export$a238c5e20ae27fe7 = "https://xlit-api.ai4bharat.org/tl/";
 
 
+"use client";
+const $86cfb7ad4842cd1e$var$generateUuid = ()=>Math.random().toString(36).slice(2, 11);
 const $86cfb7ad4842cd1e$var$KEY_UP = "ArrowUp";
 const $86cfb7ad4842cd1e$var$KEY_DOWN = "ArrowDown";
 const $86cfb7ad4842cd1e$var$KEY_LEFT = "ArrowLeft";
@@ -163,9 +175,12 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
     const [logJsonArray, setLogJsonArray] = (0, $WrkLT$useState)([]);
     const [numSpaces, setNumSpaces] = (0, $WrkLT$useState)(0);
     const [parentUuid, setParentUuid] = (0, $WrkLT$useState)("0");
-    const [uuid, setUuid] = (0, $WrkLT$useState)(Math.random().toString(36).substr(2, 9));
+    const [uuid, setUuid] = (0, $WrkLT$useState)("");
     const [subStrLength, setSubStrLength] = (0, $WrkLT$useState)(0);
     const [restart, setRestart] = (0, $WrkLT$useState)(true);
+    (0, $WrkLT$useEffect)(()=>{
+        setUuid($86cfb7ad4842cd1e$var$generateUuid());
+    }, []);
     const shouldRenderSuggestions = (0, $WrkLT$useMemo)(()=>hideSuggestionBoxOnMobileDevices ? windowSize.width > hideSuggestionBoxBreakpoint : true, [
         windowSize,
         hideSuggestionBoxBreakpoint,
@@ -287,7 +302,7 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
             };
             setLogJsonArray([]);
             setParentUuid(uuid);
-            setUuid(Math.random().toString(36).substr(2, 9));
+            setUuid($86cfb7ad4842cd1e$var$generateUuid());
             setSubStrLength(value.length - 2);
             setNumSpaces(0);
             setRestart(true);
