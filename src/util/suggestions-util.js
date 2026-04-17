@@ -6,16 +6,21 @@ const cache = loadCacheFromLocalStorage()
 let newEntriesCount = 0
 
 function loadCacheFromLocalStorage() {
-  let cachedData = ""
-  if (typeof window !== "undefined") {
-    cachedData = localStorage.getItem(CACHE_KEY)
+  if (typeof window === "undefined") return {}
+  try {
+    const cachedData = window.localStorage.getItem(CACHE_KEY)
+    return cachedData ? JSON.parse(cachedData) : {}
+  } catch (e) {
+    return {}
   }
-  return cachedData ? JSON.parse(cachedData) : {}
 }
 
 function saveCacheToLocalStorage() {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
+  } catch (e) {
+    // storage disabled, quota exceeded, or SecurityError — ignore
   }
 }
 
@@ -117,4 +122,6 @@ export const getTransliterateSuggestions = async (
   }
 }
 
-window.addEventListener("beforeunload", saveCacheToLocalStorage)
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", saveCacheToLocalStorage)
+}
