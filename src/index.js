@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { useEffect, useRef, useState, useMemo } from "react"
 import { setCaretPosition, getInputSelection, isTouchEnabled } from "./util"
@@ -6,6 +8,11 @@ import { TriggerKeys } from "./constants/TriggerKeys"
 import { getTransliterateSuggestions } from "./util/suggestions-util"
 import { getTransliterationLanguages } from "./util/getTransliterationLanguages"
 import { BASE_URL_TL } from "./constants/Urls"
+
+const generateUuid = () =>
+  Math.random()
+    .toString(36)
+    .slice(2, 11)
 
 const KEY_UP = "ArrowUp"
 const KEY_DOWN = "ArrowDown"
@@ -68,13 +75,13 @@ export const IndicTransliterate = ({
   const [logJsonArray, setLogJsonArray] = useState([])
   const [numSpaces, setNumSpaces] = useState(0)
   const [parentUuid, setParentUuid] = useState("0")
-  const [uuid, setUuid] = useState(
-    Math.random()
-      .toString(36)
-      .substr(2, 9)
-  )
+  const [uuid, setUuid] = useState("")
   const [subStrLength, setSubStrLength] = useState(0)
   const [restart, setRestart] = useState(true)
+
+  useEffect(() => {
+    setUuid(generateUuid())
+  }, [])
 
   const shouldRenderSuggestions = useMemo(
     () =>
@@ -203,11 +210,7 @@ export const IndicTransliterate = ({
       }
       setLogJsonArray([])
       setParentUuid(uuid)
-      setUuid(
-        Math.random()
-          .toString(36)
-          .substr(2, 9)
-      )
+      setUuid(generateUuid())
       setSubStrLength(value.length - 2)
       setNumSpaces(0)
       setRestart(true)
