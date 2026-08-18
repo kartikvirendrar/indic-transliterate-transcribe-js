@@ -475,23 +475,30 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
                 const audioBlob = new Blob(audioChunksRef.current, {
                     type: "audio/webm"
                 });
-                const base64Audio = await blobToBase64Raw(audioBlob);
-                const transcript = await transcribeWithDhruva(asrApiUrl, lang, base64Audio);
-                const target = inputRef.current;
-                if (target) {
-                    const cursorPos = target.selectionStart;
-                    const currentText = value;
-                    const newValue = currentText.slice(0, cursorPos) + transcript + currentText.slice(cursorPos);
-                    const e = {
-                        target: {
-                            value: newValue
-                        }
-                    };
-                    onChange?.(e);
-                    onChangeText(newValue);
+                try {
+                    const transcript = await transcribeAudio(asrApiUrl, lang, audioBlob);
+                    const target = inputRef.current;
+                    if (target && transcript) {
+                        const cursorPos = target.selectionStart;
+                        const currentText = value;
+                        const newValue = currentText.slice(0, cursorPos) + transcript + currentText.slice(cursorPos);
+                        const e = {
+                            target: {
+                                value: newValue
+                            }
+                        };
+                        onChange?.(e);
+                        onChangeText(newValue);
+                    }
+                    onVoiceTypingStateChange?.('idle');
+                } catch (err) {
+                    // Surface the failure to the host instead of silently inserting an
+                    // empty string, so it can toast / re-enable the mic.
+                    console.error("Transcription API error:", err);
+                    onVoiceTypingStateChange?.('error');
+                } finally{
+                    setIsLoading(false);
                 }
-                setIsLoading(false);
-                onVoiceTypingStateChange?.('idle');
             };
             mediaRecorder.start();
             setIsRecording(true);
@@ -503,32 +510,36 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
             onVoiceTypingStateChange?.('idle');
         }
     };
-    async function blobToBase64Raw(blob) {
-        const arrayBuffer = await blob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        let binary = "";
-        for(let i = 0; i < uint8Array.length; i++)binary += String.fromCharCode(uint8Array[i]);
-        return btoa(binary);
-    }
-    async function transcribeWithDhruva(apiURL, lang, base64Audio) {
-        try {
-            const response = await fetch(apiURL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": apiKey
-                },
-                body: JSON.stringify({
-                    audioBase64: base64Audio,
-                    lang: lang
-                })
-            });
-            const result = await response.json();
-            return result.transcript || "";
-        } catch (err) {
-            console.error("Transcription API error:", err);
-            return "";
+    // Transcribe an audio Blob against an OpenAI-audio-style ASR endpoint
+    // (e.g. Bodhan's `POST /api/v1/asr/transcriptions/`): multipart `file` +
+    // `language`, response `{ text }`. `apiKey`, when set, is sent verbatim as
+    // the Authorization header (the host passes a full `Bearer <token>` there).
+    // NOTE: no explicit Content-Type — the browser must set the multipart
+    // boundary itself. Throws on a non-2xx so the caller can surface it.
+    async function transcribeAudio(apiURL, lang, audioBlob) {
+        const form = new FormData();
+        form.append("file", audioBlob, "audio.webm");
+        form.append("language", lang);
+        const response = await fetch(apiURL, {
+            method: "POST",
+            headers: apiKey ? {
+                Authorization: apiKey
+            } : {},
+            body: form
+        });
+        if (!response.ok) {
+            let detail = "";
+            try {
+                detail = (await response.json())?.detail || "";
+            } catch (_) {
+            // non-JSON error body — fall back to the status
+            }
+            const error = new Error(detail || `ASR request failed (${response.status})`);
+            error.status = response.status;
+            throw error;
         }
+        const result = await response.json();
+        return result.text || "";
     }
     (0, $jECdM$react.useEffect)(()=>{
         if (enableASR && micButtonRef?.current) {
