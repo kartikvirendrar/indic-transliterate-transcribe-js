@@ -533,7 +533,7 @@ export const IndicTransliterate = ({
         }
       };
     }
-  }, [enableASR, micButtonRef, isRecording, value, lang]);
+  }, [enableASR, micButtonRef, isRecording, value, lang, apiKey]);
 
   return (
     <>
