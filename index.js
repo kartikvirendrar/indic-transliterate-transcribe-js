@@ -558,7 +558,8 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
         micButtonRef,
         isRecording,
         value,
-        lang
+        lang,
+        apiKey
     ]);
     return /*#__PURE__*/ (0, $jECdM$reactjsxruntime.jsxs)((0, $jECdM$reactjsxruntime.Fragment), {
         children: [

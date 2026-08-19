@@ -546,7 +546,8 @@ const $86cfb7ad4842cd1e$export$a62758b764e9e41d = ({ renderComponent: renderComp
         micButtonRef,
         isRecording,
         value,
-        lang
+        lang,
+        apiKey
     ]);
     return /*#__PURE__*/ (0, $WrkLT$jsxs)((0, $WrkLT$Fragment), {
         children: [
