@@ -8,6 +8,7 @@ import { TriggerKeys } from "./constants/TriggerKeys"
 import { getTransliterateSuggestions } from "./util/suggestions-util"
 // import { getTransliterationLanguages } from "./util/getTransliterationLanguages"
 import { BASE_URL_TL } from "./constants/Urls"
+import { StreamingDictation } from "./util/streaming-dictation"
 
 const generateUuid = () =>
   Math.random()
@@ -60,6 +61,12 @@ export const IndicTransliterate = ({
   asrApiUrl = "",
   micButtonRef = null,
   onVoiceTypingStateChange = null,
+  // Opt-in real-time streaming dictation: VAD segments the mic at pauses and
+  // transcribes each chunk as you speak (vs the default single-shot record →
+  // transcribe-on-stop). `asrStreamingOptions` passes tunables through to the
+  // StreamingDictation controller (minUtteranceSec, hardMaxSec, …).
+  asrStreaming = false,
+  asrStreamingOptions = {},
   ...rest
 }) => {
   const [left, setLeft] = useState(0)
@@ -421,8 +428,94 @@ export const IndicTransliterate = ({
   const [isLoading, setIsLoading] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  // Streaming dictation (opt-in via asrStreaming): the controller owns the mic
+  // and emits ordered transcript chunks; each is inserted at an advancing caret.
+  const dictationRef = useRef(null);
+  const insertPosRef = useRef(0);
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  });
+
+  // Insert one streamed transcript chunk at the advancing caret, reading the
+  // LIVE value (via ref) so successive chunks don't clobber each other.
+  const insertDictatedChunk = text => {
+    const cur = valueRef.current ?? "";
+    let pos = insertPosRef.current;
+    if (pos == null || pos > cur.length) pos = cur.length;
+    const needsSpace = pos > 0 && !/\s$/.test(cur.slice(0, pos));
+    const piece = (needsSpace ? " " : "") + text;
+    const newValue = cur.slice(0, pos) + piece + cur.slice(pos);
+    insertPosRef.current = pos + piece.length;
+    onChange?.({ target: { value: newValue } });
+    onChangeText?.(newValue);
+  };
+
+  const handleStreamingVoiceTyping = async () => {
+    if (!navigator.mediaDevices) {
+      alert("Browser doesn't support audio recording.");
+      return;
+    }
+    // Second click while recording → finalize (flush tail + drain).
+    if (dictationRef.current && dictationRef.current.getState() === "recording") {
+      onVoiceTypingStateChange?.('loading');
+      try {
+        await dictationRef.current.stop();
+      } catch (err) {
+        console.error("Streaming dictation stop error:", err);
+      }
+      return;
+    }
+    // First click → start. Anchor inserts at the current caret (or end).
+    const target = inputRef.current;
+    insertPosRef.current = target ? (target.selectionStart ?? (value ? value.length : 0)) : (value ? value.length : 0);
+    const dictation = new StreamingDictation({
+      ...asrStreamingOptions,
+      asrUrl: asrApiUrl,
+      language: lang,
+      getAuthHeader: () => apiKey,
+      onPartial: insertDictatedChunk,
+      onStateChange: s => {
+        if (s === "recording") {
+          setIsRecording(true);
+          setIsLoading(false);
+          onVoiceTypingStateChange?.('recording');
+        } else if (s === "finalizing") {
+          setIsRecording(false);
+          setIsLoading(true);
+          onVoiceTypingStateChange?.('loading');
+        } else if (s === "idle") {
+          setIsRecording(false);
+          setIsLoading(false);
+          onVoiceTypingStateChange?.('idle');
+        } else if (s === "error") {
+          setIsRecording(false);
+          setIsLoading(false);
+          onVoiceTypingStateChange?.('error');
+        }
+      },
+      onError: (err, kind) => {
+        if (kind === "fatal") {
+          setIsRecording(false);
+          setIsLoading(false);
+          onVoiceTypingStateChange?.('error');
+        } else {
+          // One chunk failed; recording continues. Host may choose to toast.
+          console.warn("ASR chunk failed:", err);
+        }
+      },
+    });
+    dictationRef.current = dictation;
+    try {
+      await dictation.start();
+    } catch (err) {
+      console.error("Error starting streaming dictation:", err);
+      dictationRef.current = null;
+    }
+  };
 
   const handleVoiceTyping = async () => {
+    if (asrStreaming) return handleStreamingVoiceTyping();
     if (!navigator.mediaDevices) {
       alert("Browser doesn't support audio recording.");
       return;
@@ -533,7 +626,18 @@ export const IndicTransliterate = ({
         }
       };
     }
-  }, [enableASR, micButtonRef, isRecording, value, lang, apiKey]);
+  }, [enableASR, asrStreaming, micButtonRef, isRecording, value, lang, apiKey]);
+
+  // Cancel any in-flight streaming dictation on UNMOUNT only. This must be its
+  // own effect with empty deps: the mic-bind effect above re-runs on every
+  // `value` change (each inserted chunk), and cancelling there would abort the
+  // dictation mid-utterance.
+  useEffect(() => {
+    return () => {
+      dictationRef.current?.cancel();
+      dictationRef.current = null;
+    };
+  }, []);
 
   return (
     <>
