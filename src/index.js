@@ -67,6 +67,10 @@ export const IndicTransliterate = ({
   // StreamingDictation controller (minUtteranceSec, hardMaxSec, …).
   asrStreaming = false,
   asrStreamingOptions = {},
+  // Telemetry hook: receives the StreamingDictation controller's events (start, cut, dropped,
+  // asr, end) and, in single-shot mode, one `asr` event per recording. Sizes, timings and
+  // reasons only — never audio or text. Optional; errors in the listener are swallowed.
+  onAsrTelemetry = null,
   ...rest
 }) => {
   const [left, setLeft] = useState(0)
@@ -475,6 +479,9 @@ export const IndicTransliterate = ({
       language: lang,
       getAuthHeader: () => apiKey,
       onPartial: insertDictatedChunk,
+      onTelemetry: evt => {
+        try { onAsrTelemetry?.(evt); } catch (e) { /* a listener must not break dictation */ }
+      },
       onStateChange: s => {
         if (s === "recording") {
           setIsRecording(true);
@@ -542,8 +549,12 @@ export const IndicTransliterate = ({
           onVoiceTypingStateChange?.('loading');
 
           const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const asrStartedAt = Date.now();
           try {
             const transcript = await transcribeAudio(asrApiUrl, lang, audioBlob);
+            try {
+              onAsrTelemetry?.({ type: "asr", seq: 0, ok: true, status: 200, latencyMs: Date.now() - asrStartedAt, bytes: audioBlob.size, chars: (transcript || "").length });
+            } catch (e) { /* never break dictation */ }
 
             const target = inputRef.current;
             if (target && transcript) {

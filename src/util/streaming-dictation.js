@@ -80,8 +80,18 @@ export class StreamingDictation {
       onStateChange: noop,
       onError: noop,
       onLevel: noop,
+      // Telemetry: one plain-object event per decision the controller makes, so the host
+      // app can measure the VAD instead of guessing at it. Never carries audio or text —
+      // only sizes, timings and reasons. Shapes:
+      //   {type:"start"}
+      //   {type:"cut",     seq, reason:"pause"|"long_pause"|"hard_max"|"stop", audioMs, speechMs}
+      //   {type:"dropped", reason:"no_speech"|"too_little_speech", audioMs, speechMs}
+      //   {type:"asr",     seq, ok, status, latencyMs, bytes, chars}
+      //   {type:"end",     reason:"stop"|"cancel", durationMs, segments}
+      onTelemetry: noop,
       ...options,
     }
+    this.startedAt = 0
     this.state = "idle"
 
     // audio graph
@@ -148,6 +158,8 @@ export class StreamingDictation {
       const sink = this.ctx.createGain()
       sink.gain.value = 0
       this.node.connect(sink).connect(this.ctx.destination)
+      this.startedAt = Date.now()
+      this.emitTelemetry({ type: "start" })
       this.setState("recording")
     } catch (err) {
       this.teardownAudio()
@@ -161,13 +173,17 @@ export class StreamingDictation {
     if (this.state !== "recording") return
     this.setState("finalizing")
     this.teardownAudio()
-    this.flushBucket() // the tail goes as-is, however short
+    this.flushBucket("stop") // the tail goes as-is, however short
     this.resetVad()
     await this.drain()
+    this.emitTelemetry({ type: "end", reason: "stop", durationMs: this.sinceStart(), segments: this.seq })
     this.setState("idle")
   }
 
   cancel() {
+    if (this.state !== "idle") {
+      this.emitTelemetry({ type: "end", reason: "cancel", durationMs: this.sinceStart(), segments: this.seq })
+    }
     this.teardownAudio()
     for (const c of this.controllers) c.abort()
     this.controllers.clear()
@@ -250,7 +266,7 @@ export class StreamingDictation {
       // A short bucket is waiting for more speech. A long enough silence is a
       // sentence boundary — send what we have instead of holding it hostage.
       this.pausedMs += FRAME_MS
-      if (this.pausedMs >= this.o.longPauseSec * 1000) this.flushBucket()
+      if (this.pausedMs >= this.o.longPauseSec * 1000) this.flushBucket("long_pause")
     }
   }
 
@@ -268,7 +284,7 @@ export class StreamingDictation {
     this.pausedMs = 0
     // Audio in the bucket excluding the hangover we just sat through.
     const spokenSec = this.bufSamples / this.targetRate - hangMs / 1000
-    if (spokenSec >= this.o.minUtteranceSec) this.flushBucket()
+    if (spokenSec >= this.o.minUtteranceSec) this.flushBucket("pause")
   }
 
   append(frame, idx, voiced) {
@@ -282,19 +298,24 @@ export class StreamingDictation {
   // ── Flush: cut the bucket -> WAV -> enqueue ASR ────────────────────────
 
   /** Send the bucket up to its last speech (+ pad). Drops silence-only buckets. */
-  flushBucket() {
+  flushBucket(reason = "pause") {
     if (this.bufSamples === 0) return
+    const audioMs = Math.round((this.bufSamples / this.targetRate) * 1000)
+    const speechMs = Math.round((this.speechSamples / this.targetRate) * 1000)
     if (this.speechSamples / this.targetRate < this.o.minSpeechToSendSec) {
+      this.emitTelemetry({ type: "dropped", reason: "too_little_speech", audioMs, speechMs })
       this.resetBucket()
       return
     }
     const merged = this.mergeBuf()
     const end = this.lastSpeechIndex(merged)
     if (end === 0) {
+      this.emitTelemetry({ type: "dropped", reason: "no_speech", audioMs, speechMs })
       this.resetBucket()
       return
     }
     const pad = Math.round((this.targetRate * this.o.trailingPadMs) / 1000)
+    this.emitTelemetry({ type: "cut", seq: this.seq, reason, audioMs, speechMs })
     this.send(merged.subarray(0, Math.min(merged.length, end + pad)))
     this.resetBucket()
   }
@@ -303,6 +324,13 @@ export class StreamingDictation {
   forceCut() {
     const merged = this.mergeBuf()
     const cut = this.quietestCut(merged)
+    this.emitTelemetry({
+      type: "cut",
+      seq: this.seq,
+      reason: "hard_max",
+      audioMs: Math.round((cut / this.targetRate) * 1000),
+      speechMs: Math.round((this.speechSamples / this.targetRate) * 1000),
+    })
     const carry = merged.slice(cut)
     this.send(merged.subarray(0, cut))
     this.resetBucket()
@@ -390,9 +418,22 @@ export class StreamingDictation {
     while (this.inflight < this.o.maxConcurrentAsr && this.queue.length) {
       const chunk = this.queue.shift()
       this.inflight++
+      const t0 = Date.now()
+      const bytes = chunk.wav && typeof chunk.wav.size === "number" ? chunk.wav.size : null
       this.transcribe(chunk)
-        .then(text => this.deliver(chunk.seq, text))
+        .then(text => {
+          this.emitTelemetry({
+            type: "asr", seq: chunk.seq, ok: true, status: 200,
+            latencyMs: Date.now() - t0, bytes, chars: (text || "").length,
+          })
+          this.deliver(chunk.seq, text)
+        })
         .catch(err => {
+          this.emitTelemetry({
+            type: "asr", seq: chunk.seq, ok: false,
+            status: err && typeof err.status === "number" ? err.status : null,
+            latencyMs: Date.now() - t0, bytes, chars: 0,
+          })
           this.deliver(chunk.seq, "") // keep the seq slot so ordering holds
           this.o.onError(err instanceof Error ? err : new Error(String(err)), "chunk")
         })
@@ -446,6 +487,16 @@ export class StreamingDictation {
   }
 
   // ── Plumbing ───────────────────────────────────────────────────────────
+  sinceStart() {
+    return this.startedAt ? Date.now() - this.startedAt : 0
+  }
+  emitTelemetry(evt) {
+    try {
+      this.o.onTelemetry(evt)
+    } catch (e) {
+      // a telemetry listener must never be able to break dictation
+    }
+  }
   setState(s) {
     if (this.state === s) return
     this.state = s
