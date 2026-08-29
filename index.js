@@ -227,8 +227,18 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
             onStateChange: $e9499f34e7fc5d70$var$noop,
             onError: $e9499f34e7fc5d70$var$noop,
             onLevel: $e9499f34e7fc5d70$var$noop,
+            // Telemetry: one plain-object event per decision the controller makes, so the host
+            // app can measure the VAD instead of guessing at it. Never carries audio or text —
+            // only sizes, timings and reasons. Shapes:
+            //   {type:"start"}
+            //   {type:"cut",     seq, reason:"pause"|"long_pause"|"hard_max"|"stop", audioMs, speechMs}
+            //   {type:"dropped", reason:"no_speech"|"too_little_speech", audioMs, speechMs}
+            //   {type:"asr",     seq, ok, status, latencyMs, bytes, chars}
+            //   {type:"end",     reason:"stop"|"cancel", durationMs, segments}
+            onTelemetry: $e9499f34e7fc5d70$var$noop,
             ...options
         };
+        this.startedAt = 0;
         this.state = "idle";
         // audio graph
         this.stream = null;
@@ -294,6 +304,10 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
             const sink = this.ctx.createGain();
             sink.gain.value = 0;
             this.node.connect(sink).connect(this.ctx.destination);
+            this.startedAt = Date.now();
+            this.emitTelemetry({
+                type: "start"
+            });
             this.setState("recording");
         } catch (err) {
             this.teardownAudio();
@@ -306,13 +320,25 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
         if (this.state !== "recording") return;
         this.setState("finalizing");
         this.teardownAudio();
-        this.flushBucket() // the tail goes as-is, however short
+        this.flushBucket("stop") // the tail goes as-is, however short
         ;
         this.resetVad();
         await this.drain();
+        this.emitTelemetry({
+            type: "end",
+            reason: "stop",
+            durationMs: this.sinceStart(),
+            segments: this.seq
+        });
         this.setState("idle");
     }
     cancel() {
+        if (this.state !== "idle") this.emitTelemetry({
+            type: "end",
+            reason: "cancel",
+            durationMs: this.sinceStart(),
+            segments: this.seq
+        });
         this.teardownAudio();
         for (const c of this.controllers)c.abort();
         this.controllers.clear();
@@ -388,7 +414,7 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
             // A short bucket is waiting for more speech. A long enough silence is a
             // sentence boundary — send what we have instead of holding it hostage.
             this.pausedMs += $e9499f34e7fc5d70$var$FRAME_MS;
-            if (this.pausedMs >= this.o.longPauseSec * 1000) this.flushBucket();
+            if (this.pausedMs >= this.o.longPauseSec * 1000) this.flushBucket("long_pause");
         }
     }
     onSpeechStart() {
@@ -404,7 +430,7 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
         this.pausedMs = 0;
         // Audio in the bucket excluding the hangover we just sat through.
         const spokenSec = this.bufSamples / this.targetRate - hangMs / 1000;
-        if (spokenSec >= this.o.minUtteranceSec) this.flushBucket();
+        if (spokenSec >= this.o.minUtteranceSec) this.flushBucket("pause");
     }
     append(frame, idx, voiced) {
         if (idx <= this.lastAppendedIdx) return;
@@ -414,25 +440,53 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
         if (voiced) this.speechSamples += frame.length;
     }
     // ── Flush: cut the bucket -> WAV -> enqueue ASR ────────────────────────
-    /** Send the bucket up to its last speech (+ pad). Drops silence-only buckets. */ flushBucket() {
+    /** Send the bucket up to its last speech (+ pad). Drops silence-only buckets. */ flushBucket(reason = "pause") {
         if (this.bufSamples === 0) return;
+        const audioMs = Math.round(this.bufSamples / this.targetRate * 1000);
+        const speechMs = Math.round(this.speechSamples / this.targetRate * 1000);
         if (this.speechSamples / this.targetRate < this.o.minSpeechToSendSec) {
+            this.emitTelemetry({
+                type: "dropped",
+                reason: "too_little_speech",
+                audioMs: audioMs,
+                speechMs: speechMs
+            });
             this.resetBucket();
             return;
         }
         const merged = this.mergeBuf();
         const end = this.lastSpeechIndex(merged);
         if (end === 0) {
+            this.emitTelemetry({
+                type: "dropped",
+                reason: "no_speech",
+                audioMs: audioMs,
+                speechMs: speechMs
+            });
             this.resetBucket();
             return;
         }
         const pad = Math.round(this.targetRate * this.o.trailingPadMs / 1000);
+        this.emitTelemetry({
+            type: "cut",
+            seq: this.seq,
+            reason: reason,
+            audioMs: audioMs,
+            speechMs: speechMs
+        });
         this.send(merged.subarray(0, Math.min(merged.length, end + pad)));
         this.resetBucket();
     }
     /** Hard ceiling mid-speech: cut at the quietest recent point, carry the rest. */ forceCut() {
         const merged = this.mergeBuf();
         const cut = this.quietestCut(merged);
+        this.emitTelemetry({
+            type: "cut",
+            seq: this.seq,
+            reason: "hard_max",
+            audioMs: Math.round(cut / this.targetRate * 1000),
+            speechMs: Math.round(this.speechSamples / this.targetRate * 1000)
+        });
         const carry = merged.slice(cut);
         this.send(merged.subarray(0, cut));
         this.resetBucket();
@@ -513,7 +567,29 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
         while(this.inflight < this.o.maxConcurrentAsr && this.queue.length){
             const chunk = this.queue.shift();
             this.inflight++;
-            this.transcribe(chunk).then((text)=>this.deliver(chunk.seq, text)).catch((err)=>{
+            const t0 = Date.now();
+            const bytes = chunk.wav && typeof chunk.wav.size === "number" ? chunk.wav.size : null;
+            this.transcribe(chunk).then((text)=>{
+                this.emitTelemetry({
+                    type: "asr",
+                    seq: chunk.seq,
+                    ok: true,
+                    status: 200,
+                    latencyMs: Date.now() - t0,
+                    bytes: bytes,
+                    chars: (text || "").length
+                });
+                this.deliver(chunk.seq, text);
+            }).catch((err)=>{
+                this.emitTelemetry({
+                    type: "asr",
+                    seq: chunk.seq,
+                    ok: false,
+                    status: err && typeof err.status === "number" ? err.status : null,
+                    latencyMs: Date.now() - t0,
+                    bytes: bytes,
+                    chars: 0
+                });
                 this.deliver(chunk.seq, "") // keep the seq slot so ordering holds
                 ;
                 this.o.onError(err instanceof Error ? err : new Error(String(err)), "chunk");
@@ -563,6 +639,16 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
         while(this.queue.length || this.inflight || this.nextEmit < this.seq)await new Promise((r)=>setTimeout(r, 50));
     }
     // ── Plumbing ───────────────────────────────────────────────────────────
+    sinceStart() {
+        return this.startedAt ? Date.now() - this.startedAt : 0;
+    }
+    emitTelemetry(evt) {
+        try {
+            this.o.onTelemetry(evt);
+        } catch (e) {
+        // a telemetry listener must never be able to break dictation
+        }
+    }
     setState(s) {
         if (this.state === s) return;
         this.state = s;
@@ -669,7 +755,10 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
 // transcribes each chunk as you speak (vs the default single-shot record →
 // transcribe-on-stop). `asrStreamingOptions` passes tunables through to the
 // StreamingDictation controller (minUtteranceSec, hardMaxSec, …).
-asrStreaming = false, asrStreamingOptions: asrStreamingOptions = {}, ...rest })=>{
+asrStreaming = false, asrStreamingOptions: asrStreamingOptions = {}, onAsrTelemetry: // Telemetry hook: receives the StreamingDictation controller's events (start, cut, dropped,
+// asr, end) and, in single-shot mode, one `asr` event per recording. Sizes, timings and
+// reasons only — never audio or text. Optional; errors in the listener are swallowed.
+onAsrTelemetry = null, ...rest })=>{
     const [left, setLeft] = (0, $jECdM$react.useState)(0);
     const [top, setTop] = (0, $jECdM$react.useState)(0);
     const [selection, setSelection] = (0, $jECdM$react.useState)(0);
@@ -997,6 +1086,11 @@ asrStreaming = false, asrStreamingOptions: asrStreamingOptions = {}, ...rest })=
             language: lang,
             getAuthHeader: ()=>apiKey,
             onPartial: insertDictatedChunk,
+            onTelemetry: (evt)=>{
+                try {
+                    onAsrTelemetry?.(evt);
+                } catch (e) {}
+            },
             onStateChange: (s)=>{
                 if (s === "recording") {
                     setIsRecording(true);
@@ -1060,8 +1154,20 @@ asrStreaming = false, asrStreamingOptions: asrStreamingOptions = {}, ...rest })=
                 const audioBlob = new Blob(audioChunksRef.current, {
                     type: "audio/webm"
                 });
+                const asrStartedAt = Date.now();
                 try {
                     const transcript = await transcribeAudio(asrApiUrl, lang, audioBlob);
+                    try {
+                        onAsrTelemetry?.({
+                            type: "asr",
+                            seq: 0,
+                            ok: true,
+                            status: 200,
+                            latencyMs: Date.now() - asrStartedAt,
+                            bytes: audioBlob.size,
+                            chars: (transcript || "").length
+                        });
+                    } catch (e) {}
                     const target = inputRef.current;
                     if (target && transcript) {
                         const cursorPos = target.selectionStart;
