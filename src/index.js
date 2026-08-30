@@ -71,6 +71,9 @@ export const IndicTransliterate = ({
   // asr, end) and, in single-shot mode, one `asr` event per recording. Sizes, timings and
   // reasons only — never audio or text. Optional; errors in the listener are swallowed.
   onAsrTelemetry = null,
+  // Transliteration lookups fail silently by design (typing must never block); this reports
+  // each failure as {status, latencyMs} — never the word — so a host can count them.
+  onTransliterationError = null,
   ...rest
 }) => {
   const [left, setLeft] = useState(0)
@@ -198,7 +201,8 @@ export const IndicTransliterate = ({
       {
         // numOptions,
         showCurrentWordAsLastSuggestion,
-        lang
+        lang,
+        onError: onTransliterationError
       }
     )
     setOptions(data ?? [])
