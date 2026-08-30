@@ -92,7 +92,12 @@ const $857753f052b25831$var$getWordWithLowestFrequency = (dictionary)=>{
 };
 const $857753f052b25831$export$27f30d10c00bcc6c = async (word, customApiURL, apiKey, config)=>{
     const { showCurrentWordAsLastSuggestion: // numOptions = 5,
-    showCurrentWordAsLastSuggestion = true, lang: lang = "hi" } = config || {};
+    showCurrentWordAsLastSuggestion = true, lang: lang = "hi", onError: // Called once per FAILED lookup with {status, latencyMs} — the HTTP status when there was
+    // a response (null for a network error / unparseable body) and the round trip. Never the
+    // word or the response body: a host may forward this straight to analytics.
+    onError = null } = config || {};
+    const startedAt = Date.now();
+    let status = null;
     // fetch suggestion from api
     // const url = `https://www.google.com/inputtools/request?ime=transliteration_en_${lang}&num=5&cp=0&cs=0&ie=utf-8&oe=utf-8&app=jsapi&text=${word}`;
     // let myHeaders = new Headers();
@@ -110,8 +115,9 @@ const $857753f052b25831$export$27f30d10c00bcc6c = async (word, customApiURL, api
     };
     try {
         const res = await fetch(customApiURL + `${lang}/${word === "." || word === ".." ? " " + word.replace(".", "%2E") : encodeURIComponent(word).replace(".", "%2E")}`, requestOptions);
+        status = res.status;
+        if (!res.ok) throw new Error(`transliteration HTTP ${res.status}`);
         let data = await res.json();
-        console.log("library data", data);
         if (!customApiURL.includes("xlit-api")) data.result = data.output[0].target;
         if (data && data.result.length > 0) {
             const found = showCurrentWordAsLastSuggestion ? [
@@ -142,8 +148,15 @@ const $857753f052b25831$export$27f30d10c00bcc6c = async (word, customApiURL, api
             return [];
         }
     } catch (e) {
-        // catch error
         console.error("There was an error with transliteration", e);
+        try {
+            onError && onError({
+                status: status,
+                latencyMs: Date.now() - startedAt
+            });
+        } catch (ignored) {
+        // a listener must never break typing
+        }
         return [];
     }
 };
@@ -758,7 +771,9 @@ const $0e1b765668e4d0aa$export$a62758b764e9e41d = ({ renderComponent: renderComp
 asrStreaming = false, asrStreamingOptions: asrStreamingOptions = {}, onAsrTelemetry: // Telemetry hook: receives the StreamingDictation controller's events (start, cut, dropped,
 // asr, end) and, in single-shot mode, one `asr` event per recording. Sizes, timings and
 // reasons only — never audio or text. Optional; errors in the listener are swallowed.
-onAsrTelemetry = null, ...rest })=>{
+onAsrTelemetry = null, onTransliterationError: // Transliteration lookups fail silently by design (typing must never block); this reports
+// each failure as {status, latencyMs} — never the word — so a host can count them.
+onTransliterationError = null, ...rest })=>{
     const [left, setLeft] = (0, $jECdM$react.useState)(0);
     const [top, setTop] = (0, $jECdM$react.useState)(0);
     const [selection, setSelection] = (0, $jECdM$react.useState)(0);
@@ -856,7 +871,8 @@ onAsrTelemetry = null, ...rest })=>{
         const data = await (0, $857753f052b25831$export$27f30d10c00bcc6c)(lastWord, customApiURL, apiKey, {
             showCurrentWordAsLastSuggestion: // numOptions,
             showCurrentWordAsLastSuggestion,
-            lang: lang
+            lang: lang,
+            onError: onTransliterationError
         });
         setOptions(data ?? []);
         let logJson = {
