@@ -47,8 +47,14 @@ export const getTransliterateSuggestions = async (
   const {
     // numOptions = 5,
     showCurrentWordAsLastSuggestion = true,
-    lang = "hi"
+    lang = "hi",
+    // Called once per FAILED lookup with {status, latencyMs} — the HTTP status when there was
+    // a response (null for a network error / unparseable body) and the round trip. Never the
+    // word or the response body: a host may forward this straight to analytics.
+    onError = null
   } = config || {}
+  const startedAt = Date.now()
+  let status = null
   // fetch suggestion from api
   // const url = `https://www.google.com/inputtools/request?ime=transliteration_en_${lang}&num=5&cp=0&cs=0&ie=utf-8&oe=utf-8&app=jsapi&text=${word}`;
   // let myHeaders = new Headers();
@@ -79,8 +85,9 @@ export const getTransliterateSuggestions = async (
       }`,
       requestOptions
     )
+    status = res.status
+    if (!res.ok) throw new Error(`transliteration HTTP ${res.status}`)
     let data = await res.json()
-    console.log("library data", data)
     if (!customApiURL.includes("xlit-api")) {
       data.result = data.output[0].target
     }
@@ -116,8 +123,12 @@ export const getTransliterateSuggestions = async (
       return []
     }
   } catch (e) {
-    // catch error
     console.error("There was an error with transliteration", e)
+    try {
+      onError && onError({ status, latencyMs: Date.now() - startedAt })
+    } catch (ignored) {
+      // a listener must never break typing
+    }
     return []
   }
 }
