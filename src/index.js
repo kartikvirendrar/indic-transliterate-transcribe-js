@@ -8,7 +8,34 @@ import { TriggerKeys } from "./constants/TriggerKeys"
 import { getTransliterateSuggestions } from "./util/suggestions-util"
 // import { getTransliterationLanguages } from "./util/getTransliterationLanguages"
 import { BASE_URL_TL } from "./constants/Urls"
-import { StreamingDictation } from "./util/streaming-dictation"
+import { StreamingDictation, encodeWav } from "./util/streaming-dictation"
+
+// The ASR upstream accepts WAV only, but MediaRecorder records Opus/webm.
+// Decode and downsample in the browser — format conversion is client-side by
+// design (the proxy refuses to pay for transcoding) — producing the same
+// 16 kHz mono 16-bit WAV the streaming dictation path encodes natively.
+async function blobToWav(blob, targetRate = 16000) {
+  const arrayBuf = await blob.arrayBuffer()
+  const Ctx = window.AudioContext || window.webkitAudioContext
+  const ctx = new Ctx()
+  try {
+    const decoded = await ctx.decodeAudioData(arrayBuf)
+    const mono = decoded.getChannelData(0)
+    const ratio = decoded.sampleRate / targetRate
+    const out = new Float32Array(Math.floor(mono.length / ratio))
+    for (let i = 0; i < out.length; i++) {
+      const pos = i * ratio
+      const j = Math.floor(pos)
+      const frac = pos - j
+      const a = mono[j]
+      const b = j + 1 < mono.length ? mono[j + 1] : a
+      out[i] = a + (b - a) * frac
+    }
+    return encodeWav(out, targetRate)
+  } finally {
+    ctx.close().catch(() => {})
+  }
+}
 
 const generateUuid = () =>
   Math.random()
@@ -552,9 +579,10 @@ export const IndicTransliterate = ({
           setIsLoading(true);
           onVoiceTypingStateChange?.('loading');
 
-          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const recordedBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
           const asrStartedAt = Date.now();
           try {
+            const audioBlob = await blobToWav(recordedBlob);
             const transcript = await transcribeAudio(asrApiUrl, lang, audioBlob);
             try {
               onAsrTelemetry?.({ type: "asr", seq: 0, ok: true, status: 200, latencyMs: Date.now() - asrStartedAt, bytes: audioBlob.size, chars: (transcript || "").length });
@@ -601,7 +629,7 @@ export const IndicTransliterate = ({
   // boundary itself. Throws on a non-2xx so the caller can surface it.
   async function transcribeAudio(apiURL, lang, audioBlob) {
     const form = new FormData()
-    form.append("file", audioBlob, "audio.webm")
+    form.append("file", audioBlob, "audio.wav")
     form.append("language", lang)
 
     const response = await fetch(apiURL, {
