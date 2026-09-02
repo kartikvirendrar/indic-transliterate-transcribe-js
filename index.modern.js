@@ -737,6 +737,32 @@ function $f85798d3c097ff85$export$1ceb7a840e500dd1(samples, sampleRate) {
 
 
 "use client";
+// The ASR upstream accepts WAV only, but MediaRecorder records Opus/webm.
+// Decode and downsample in the browser — format conversion is client-side by
+// design (the proxy refuses to pay for transcoding) — producing the same
+// 16 kHz mono 16-bit WAV the streaming dictation path encodes natively.
+async function $86cfb7ad4842cd1e$var$blobToWav(blob, targetRate = 16000) {
+    const arrayBuf = await blob.arrayBuffer();
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    try {
+        const decoded = await ctx.decodeAudioData(arrayBuf);
+        const mono = decoded.getChannelData(0);
+        const ratio = decoded.sampleRate / targetRate;
+        const out = new Float32Array(Math.floor(mono.length / ratio));
+        for(let i = 0; i < out.length; i++){
+            const pos = i * ratio;
+            const j = Math.floor(pos);
+            const frac = pos - j;
+            const a = mono[j];
+            const b = j + 1 < mono.length ? mono[j + 1] : a;
+            out[i] = a + (b - a) * frac;
+        }
+        return (0, $f85798d3c097ff85$export$1ceb7a840e500dd1)(out, targetRate);
+    } finally{
+        ctx.close().catch(()=>{});
+    }
+}
 const $86cfb7ad4842cd1e$var$generateUuid = ()=>Math.random().toString(36).slice(2, 11);
 const $86cfb7ad4842cd1e$var$KEY_UP = "ArrowUp";
 const $86cfb7ad4842cd1e$var$KEY_DOWN = "ArrowDown";
@@ -1155,11 +1181,12 @@ onTransliterationError = null, ...rest })=>{
             mediaRecorder.onstop = async ()=>{
                 setIsLoading(true);
                 onVoiceTypingStateChange?.('loading');
-                const audioBlob = new Blob(audioChunksRef.current, {
+                const recordedBlob = new Blob(audioChunksRef.current, {
                     type: "audio/webm"
                 });
                 const asrStartedAt = Date.now();
                 try {
+                    const audioBlob = await $86cfb7ad4842cd1e$var$blobToWav(recordedBlob);
                     const transcript = await transcribeAudio(asrApiUrl, lang, audioBlob);
                     try {
                         onAsrTelemetry?.({
@@ -1213,7 +1240,7 @@ onTransliterationError = null, ...rest })=>{
     // boundary itself. Throws on a non-2xx so the caller can surface it.
     async function transcribeAudio(apiURL, lang, audioBlob) {
         const form = new FormData();
-        form.append("file", audioBlob, "audio.webm");
+        form.append("file", audioBlob, "audio.wav");
         form.append("language", lang);
         const response = await fetch(apiURL, {
             method: "POST",
