@@ -282,6 +282,8 @@ export default App;
 | showCurrentWordAsLastSuggestion  |           | `true`                                      | Show current input as the last option in the suggestion box                                                                          |
 | horizontalView | | `false` | When `true` suggestions appear side by side, improving readability and accessibility for users who prefer a compact layout |
 | customApiURL | | indic transliterate api | Flexibility to use external API for transliteration, seamless integration as long as the response structure follows the required format [4.5](#45-With-External-API-for-transliteration) |
+| suggestionDebounceMs | | 200 | Milliseconds to wait after the last keystroke before requesting suggestions. Without it the component issues one request PER KEYSTROKE (typing `kamal` fires 5), and cross-origin each also carries its own CORS preflight because the preflight cache is keyed by URL. Set `0` for the original per-keystroke behaviour. |
+| minSuggestionWordLength | | 2 | Do not look up words shorter than this. A single leading character is the weakest possible signal and is ~20% of keystrokes in ordinary prose. Set `1` to look up from the first character. |
 
 ## 6. Languages
 

@@ -101,6 +101,24 @@ export const IndicTransliterate = ({
   // Transliteration lookups fail silently by design (typing must never block); this reports
   // each failure as {status, latencyMs} — never the word — so a host can count them.
   onTransliterationError = null,
+  // Wait this long after the last keystroke before asking the API for suggestions.
+  //
+  // Without it the component issues one request PER KEYSTROKE: typing "kamal" fires five
+  // lookups (k, ka, kam, kama, kamal) of which only the last is the word the user meant,
+  // and the four before it are pure load on the host's transliteration service. Under a
+  // cross-origin setup each also carries an Authorization header, so each is preceded by
+  // its own CORS preflight — and the preflight cache is keyed by URL, so a growing prefix
+  // never reuses one. That is two requests per keystroke.
+  //
+  // 200ms is chosen to sit just above a fast typist's inter-key gap so a burst collapses
+  // to one lookup, while staying below the ~250ms at which suggestions start to feel like
+  // they lag the caret. Set 0 to restore the original per-keystroke behaviour.
+  suggestionDebounceMs = 200,
+  // Do not look up words shorter than this. A single leading character is the weakest
+  // possible signal — the API returns its most generic candidates for it — and it is
+  // ~20% of all keystrokes in ordinary prose, so skipping it removes a fifth of the
+  // traffic for output almost nobody accepts. Set 1 to look up from the first character.
+  minSuggestionWordLength = 2,
   ...rest
 }) => {
   const [left, setLeft] = useState(0)
@@ -132,8 +150,35 @@ export const IndicTransliterate = ({
     [windowSize, hideSuggestionBoxBreakpoint, hideSuggestionBoxOnMobileDevices]
   )
 
+  // Pending debounced lookup (see suggestionDebounceMs). Held in a ref rather than state
+  // because changing it must never re-render — this fires on every keystroke.
+  const suggestionTimerRef = useRef(null)
+
+  const cancelPendingSuggestions = () => {
+    if (suggestionTimerRef.current) {
+      clearTimeout(suggestionTimerRef.current)
+      suggestionTimerRef.current = null
+    }
+  }
+
+  // Trailing-edge debounce: each keystroke cancels the one before it, so a burst of typing
+  // costs exactly one lookup — for the word as it stood when the user paused, which is the
+  // only prefix whose suggestions anyone reads.
+  const scheduleSuggestions = (lastWord, wholeText) => {
+    cancelPendingSuggestions()
+    if (!(suggestionDebounceMs > 0)) {
+      renderSuggestions(lastWord, wholeText)
+      return
+    }
+    suggestionTimerRef.current = setTimeout(() => {
+      suggestionTimerRef.current = null
+      renderSuggestions(lastWord, wholeText)
+    }, suggestionDebounceMs)
+  }
+
   const reset = () => {
     // reset the component
+    cancelPendingSuggestions()
     setSelection(0)
     setOptions([])
   }
@@ -341,18 +386,27 @@ export const IndicTransliterate = ({
     // currentWord is the word that is being typed
     const currentWord = value.slice(indexOfLastSpace + 1, caret)
     if (currentWord && enabled) {
-      // make an api call to fetch suggestions
+      // Too short to be worth a lookup. Drop any in-flight schedule AND any suggestions
+      // already on screen: they belong to a longer prefix the user has just deleted back
+      // past, so leaving them up would offer completions for a word that no longer exists.
+      if (currentWord.length < minSuggestionWordLength) {
+        cancelPendingSuggestions()
+        setOptions([])
+        return
+      }
+
+      // schedule an api call to fetch suggestions (debounced — see scheduleSuggestions)
       if (numSpaces == 0 || restart) {
         if (value.length >= 4) {
-          renderSuggestions(
+          scheduleSuggestions(
             currentWord,
             value.substr(value.length - 4, value.length)
           )
         } else {
-          renderSuggestions(currentWord, value.substr(0, value.length))
+          scheduleSuggestions(currentWord, value.substr(0, value.length))
         }
       } else {
-        renderSuggestions(currentWord, value.substr(subStrLength, value.length))
+        scheduleSuggestions(currentWord, value.substr(subStrLength, value.length))
       }
 
       const rect = input.getBoundingClientRect()
@@ -681,6 +735,10 @@ export const IndicTransliterate = ({
       dictationRef.current = null;
     };
   }, []);
+
+  // A debounced lookup outliving the component would setState on an unmounted tree (and
+  // spend a request nobody can see the result of).
+  useEffect(() => cancelPendingSuggestions, []);
 
   return (
     <>
