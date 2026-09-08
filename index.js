@@ -285,6 +285,13 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
         ;
         this.pausedMs = 0 // silence elapsed since a non-flushing pause closed capture
         ;
+        // Start/cancel interlock. `startGen` is bumped by cancel() and by a stop()
+        // that lands mid-start; a start() that resumes from an await compares its
+        // own token and, if the world moved on, releases what it just acquired
+        // instead of building a capture graph nobody owns. `starting` marks the
+        // window between start() being called and "recording" being reached.
+        this.startGen = 0;
+        this.starting = false;
         // ASR ordering + concurrency
         this.seq = 0;
         this.nextEmit = 0;
@@ -297,9 +304,17 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
         return this.state;
     }
     async start() {
-        if (this.state !== "idle") return;
+        if (this.state !== "idle" || this.starting) return;
+        // getUserMedia can sit on a permission prompt for seconds, and the host
+        // may cancel() (✕, remount, navigation) inside that window. Before this
+        // guard, cancel() there was a silent no-op — stream/ctx were still null —
+        // and the resumed start() built a live recorder that no owner could ever
+        // stop: the field kept receiving chunks with the mic "off". Each await is
+        // followed by a generation check; a stale start releases what it holds.
+        const gen = ++this.startGen;
+        this.starting = true;
         try {
-            this.stream = await navigator.mediaDevices.getUserMedia({
+            const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     channelCount: 1,
                     echoCancellation: true,
@@ -307,9 +322,18 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
                     autoGainControl: true
                 }
             });
+            if (gen !== this.startGen) {
+                stream.getTracks().forEach((t)=>t.stop());
+                return;
+            }
+            this.stream = stream;
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.inRate = this.ctx.sampleRate;
             await this.ctx.audioWorklet.addModule(this.buildWorkletUrl());
+            if (gen !== this.startGen) {
+                this.teardownAudio();
+                return;
+            }
             this.source = this.ctx.createMediaStreamSource(this.stream);
             this.node = new AudioWorkletNode(this.ctx, "pcm-forwarder");
             this.node.port.onmessage = (e)=>this.onPcm(e.data);
@@ -318,18 +342,34 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
             sink.gain.value = 0;
             this.node.connect(sink).connect(this.ctx.destination);
             this.startedAt = Date.now();
+            this.starting = false;
             this.emitTelemetry({
                 type: "start"
             });
             this.setState("recording");
         } catch (err) {
+            // A start abandoned by cancel()/stop() mid-await is not a failure.
+            if (gen !== this.startGen) return;
+            this.starting = false;
             this.teardownAudio();
             this.setState("error");
             this.o.onError(err instanceof Error ? err : new Error(String(err)), "fatal");
             throw err;
         }
     }
+    /** True from the moment start() is called until the controller is idle again
+   *  — including the pre-capture wait, so a host can tell "busy" from "idle"
+   *  without racing the permission prompt. */ isActive() {
+        return this.starting || this.state === "recording" || this.state === "finalizing";
+    }
     async stop() {
+        if (this.starting) {
+            // Capture never began — abandon the pending start rather than finalise.
+            this.startGen++;
+            this.starting = false;
+            this.setState("idle");
+            return;
+        }
         if (this.state !== "recording") return;
         this.setState("finalizing");
         this.teardownAudio();
@@ -346,6 +386,8 @@ class $e9499f34e7fc5d70$export$eae2660aea493150 {
         this.setState("idle");
     }
     cancel() {
+        this.startGen++;
+        this.starting = false;
         if (this.state !== "idle") this.emitTelemetry({
             type: "end",
             reason: "cancel",
@@ -1110,10 +1152,16 @@ onTransliterationError = null, ...rest })=>{
             return;
         }
         // Second click while recording → finalize (flush tail + drain).
-        if (dictationRef.current && dictationRef.current.getState() === "recording") {
-            onVoiceTypingStateChange?.('loading');
+        // Any click while a controller is busy — waiting on the permission prompt,
+        // recording, or draining — goes to THAT controller. Creating a second one
+        // here is how a recorder gets orphaned (the ref moves on; the old capture
+        // graph keeps running with nothing pointing at it).
+        const active = dictationRef.current;
+        if (active && active.isActive()) {
+            if (active.getState() === "finalizing") return; // already stopping
+            if (active.getState() === "recording") onVoiceTypingStateChange?.('loading');
             try {
-                await dictationRef.current.stop();
+                await active.stop(); // recording → finalise; still starting → abandon
             } catch (err) {
                 console.error("Streaming dictation stop error:", err);
             }
