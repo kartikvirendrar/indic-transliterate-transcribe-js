@@ -492,10 +492,16 @@ export const IndicTransliterate = ({
       return;
     }
     // Second click while recording → finalize (flush tail + drain).
-    if (dictationRef.current && dictationRef.current.getState() === "recording") {
-      onVoiceTypingStateChange?.('loading');
+    // Any click while a controller is busy — waiting on the permission prompt,
+    // recording, or draining — goes to THAT controller. Creating a second one
+    // here is how a recorder gets orphaned (the ref moves on; the old capture
+    // graph keeps running with nothing pointing at it).
+    const active = dictationRef.current;
+    if (active && active.isActive()) {
+      if (active.getState() === "finalizing") return; // already stopping
+      if (active.getState() === "recording") onVoiceTypingStateChange?.('loading');
       try {
-        await dictationRef.current.stop();
+        await active.stop(); // recording → finalise; still starting → abandon
       } catch (err) {
         console.error("Streaming dictation stop error:", err);
       }
